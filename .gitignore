@@ -1,1 +1,8 @@
 .vscode
+.direnv
+*.aux
+*.glob
+*.vo
+*.vos
+*.vok
+*.d
