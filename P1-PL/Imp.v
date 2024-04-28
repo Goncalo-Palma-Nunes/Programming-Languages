@@ -201,18 +201,10 @@ Notation "'while' x 'do' y 'end'" :=
             (in custom com at level 89, x at level 99, y at level 99) : com_scope.
 Notation "x '!!' y" :=
           (CNonDet x y)
-            (* TODO - prioridade *) : com_scope.
+            (in custom com at level 90, right associativity) : com_scope.
 Notation "x '->' y" :=
           (CGuard x y)
-            (* TODO - prioridade *) : com_scope.
+            (in custom com at level 89, right associativity) : com_scope.
 
-(**
-  1.3. TODO: Define p1 and p2 as, respectively, the programs:
-
-                (X := 1  !!  X := 2);  X=2 -> skip
-             and
-                X:=2
-
-*)
-Example p1 := (* TODO *).
-Example p2 := (* TODO *).
+Example p1 := <{ (X := 1  !!  X := 2);  X=2 -> skip }>.
+Example p2 := <{ X:=2 }>.
