@@ -199,6 +199,12 @@ Notation "'if' x 'then' y 'else' z 'end'" :=
 Notation "'while' x 'do' y 'end'" :=
          (CWhile x y)
             (in custom com at level 89, x at level 99, y at level 99) : com_scope.
+Notation "x '!!' y" :=
+          (CNonDet x y)
+            (* TODO - prioridade *) : com_scope.
+Notation "x '->' y" :=
+          (CGuard x y)
+            (* TODO - prioridade *) : com_scope.
 
 (**
   1.3. TODO: Define p1 and p2 as, respectively, the programs:
