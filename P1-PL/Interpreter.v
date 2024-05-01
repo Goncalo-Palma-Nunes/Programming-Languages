@@ -42,19 +42,19 @@ Fixpoint ceval_step (st : state) (c : com) (continuation: list (state * com)) (i
               | Fail => Fail
               | OutOfGas => OutOfGas
               end
-          | CIf b c1 c2 => (* TODO use the Imp Notation *)
+          | CIf b c1 c2 =>
               if (beval st b)
                 then ceval_step st c1 continuation n
                 else ceval_step st c2 continuation n
           | CWhile b c => (* TODO *) (*Success (st, continuation)*) (* Este Success é uma placeholder *)
               if (beval st b)
-                then match ceval_step st c continuation n with
-                | Success (st', continuation') => ceval_step st' c continuation' n
+                then match ceval_step st c continuation n with (* TODO use the Imp Notation *)
+                | Success (st', continuation') => ceval_step st' c continuation' n (* Repeat while with new state *)
                 | Fail => Fail
                 | OutOfGas => OutOfGas
                 end
-                else Success (st, continuation) (* Should this be a Fail? *)
-          | <{ c1 !! c2 }> =>  (* TODO *) Success (st, continuation) (* Este Success é uma placeholder *)
+                else Success (st, continuation)
+          | <{ c1 !! c2 }> =>  ceval_step st c1 continuation n (* Coq has to pick one, so we just chose the first *)
           | <{ b -> c }> =>   (* TODO *) Success (st, continuation) (* Este Success é uma placeholder *)
           end
   end.
