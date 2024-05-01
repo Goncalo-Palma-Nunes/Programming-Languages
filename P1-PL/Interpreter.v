@@ -38,7 +38,11 @@ Fixpoint ceval_step (st : state) (c : com) (continuation: list (state * com)) (i
           | <{ x := a }> => Success ((x !-> (aeval st a) ; st), continuation) (* Update total_map st with binding *)
           | <{ c1 ; c2 }> =>
               match ceval_step st c1 continuation n with (* TODO - use LETOPT notations *)
-              | Success (st', continuation') => ceval_step st' c2 continuation' n
+              | Success (st', continuation') =>
+                let
+                  continuation' := map (fun p => (fst p, <{ snd p; c2 }>)) continuation' (* Make c2 execute after all continuations *)
+                in
+                  ceval_step st' c2 continuation' n
               | Fail => Fail
               | OutOfGas => OutOfGas
               end
