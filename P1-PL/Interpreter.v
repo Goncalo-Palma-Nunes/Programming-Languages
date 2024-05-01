@@ -138,7 +138,9 @@ Proof. auto. Qed.
 (**
   2.2. TODO: Prove p1_equals_p2. Recall that p1 and p2 are defined in Imp.v
 *)
-
+(* For all possible states and continuations, there exists an amount of gas i0,
+such that any amount of gas i1 greater than or equal to i0, is enough for the evaluation
+(with ceval_step) of p1 and p2 to be the same. *)
 Theorem p1_equals_p2: forall st cont,
   (exists i0,
     (forall i1, i1 >= i0 -> ceval_step st p1 cont i1 =  ceval_step st p2 cont i1)).
