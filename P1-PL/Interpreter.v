@@ -152,7 +152,10 @@ Qed.
 (**
   2.3. TODO: Prove ceval_step_more.
 *)
-
+(* For any two executions of the same program c, starting in the same state st
+and with the same list of continuations cont, with different amounts of gas
+i1 <= i2, if the execution with i1 succeeds, then the execution with i2
+will also succeed, with the same end state and list of continuations *)
 Theorem ceval_step_more: forall i1 i2 st st' c cont cont',
   i1 <= i2 ->
   ceval_step st c cont i1 = Success (st', cont') ->
