@@ -46,7 +46,7 @@ Fixpoint ceval_step (st : state) (c : com) (continuation: list (state * com)) (i
               if (beval st b)
                 then ceval_step st c1 continuation n
                 else ceval_step st c2 continuation n
-          | CWhile b c1 => (* TODO *) (*Success (st, continuation)*) (* Este Success é uma placeholder *)
+          | CWhile b c1 =>
               if (beval st b)
                 then match ceval_step st c1 continuation n with (* TODO use the Imp Notation *)
                 | Success (st', continuation') => ceval_step st' c continuation' n (* Repeat while with new state *)
@@ -55,7 +55,13 @@ Fixpoint ceval_step (st : state) (c : com) (continuation: list (state * com)) (i
                 end
                 else Success (st, continuation)
           | <{ c1 !! c2 }> =>  ceval_step st c1 ( (st, c2) :: continuation) n
-          | <{ b -> c }> =>   (* TODO *) Success (st, continuation) (* Este Success é uma placeholder *)
+          | <{ b -> c1 }> => 
+            if (beval st b)
+              then ceval_step st c1 continuation n
+              else match continuation with (* Backtrack non-deterministic choice *)
+                | [] => Fail (* No remaining non-deterministic choices to execute *)
+                | (st', c') :: continuation' => ceval_step st' c' continuation' n
+              end
           end
   end.
 
