@@ -42,11 +42,11 @@ Fixpoint ceval_step (st : state) (c : com) (continuation: list (state * com)) (i
               | Fail => Fail
               | OutOfGas => OutOfGas
               end
-          | CIf b c1 c2 =>
+          | CIf b c1 c2 => (* TODO use the Imp language notation *)
               if (beval st b)
                 then ceval_step st c1 continuation n
                 else ceval_step st c2 continuation n
-          | CWhile b c1 =>
+          | CWhile b c1 => (* TODO use the Imp language notation *)
               if (beval st b)
                 then match ceval_step st c1 continuation n with (* TODO use the Imp Notation *)
                 | Success (st', continuation') => ceval_step st' c continuation' n (* Repeat while with new state *)
