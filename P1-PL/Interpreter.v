@@ -54,7 +54,7 @@ Fixpoint ceval_step (st : state) (c : com) (continuation: list (state * com)) (i
                 | OutOfGas => OutOfGas
                 end
                 else Success (st, continuation)
-          | <{ c1 !! c2 }> =>  ceval_step st c1 continuation n (* Coq has to pick one, so we just chose the first *)
+          | <{ c1 !! c2 }> =>  ceval_step st c1 ( (st, c2) :: continuation) n
           | <{ b -> c }> =>   (* TODO *) Success (st, continuation) (* Este Success é uma placeholder *)
           end
   end.
