@@ -60,9 +60,9 @@ Inductive ceval : com -> state -> list (state * com) ->
   st / q =[ c1 !! c2 ]=> st / ((st, c2) :: q) / Success
 | E_NonDet2 : forall st q c1 c2, (* Are both cases needed? *)
   st / q =[ c1 !! c2 ]=> st / ((st, c1) :: q) / Success
-| E_GuardTrue : forall st q b c,
+| E_GuardTrue : forall st st' q b c,
   beval st b = true -> (* if the guard condition is true *)
-  st / q =[ (b -> c) ]=> st / q / Success
+  st / q =[ (b -> c) ]=> st' / q / Success
 | E_GuardFalse_NoCont : forall st st' q b c,
   beval st b = false -> (* if the guard condition is false *)
   q = [] -> (* No remaining non-deterministic choices to execute *)
@@ -136,7 +136,11 @@ empty_st / [] =[
    (X = 2) -> X:=3
 ]=> (X !-> 3 ; X !-> 2) / [] / Success.
 Proof.
-  (* TODO *)
+  apply E_Seq with (X !-> 2; empty_st) [].
+  - (* Assignment command *)
+    apply E_Asgn.
+  - (* Guard command *)
+    apply E_GuardTrue. reflexivity.
 Qed. 
 
 Example ceval_example_guard3: exists q,
