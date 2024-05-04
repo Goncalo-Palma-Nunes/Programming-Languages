@@ -44,10 +44,10 @@ Inductive ceval : com -> state -> list (state * com) ->
   beval st b = true ->
   st / q =[ c1 ]=> st / q / Success -> (* Do we need to check for FAIL? *)
   st / q =[ if b then c1 else c2 end ]=> st / q / Success
-| E_IfFalse : forall st q b c1 c2,
+| E_IfFalse : forall st st' q b c1 c2,
   beval st b = false ->
-  st / q =[ c2 ]=> st / q / Success -> (* Do we need to check for FAIL? *)
-  st / q =[ if b then c1 else c2 end ]=> st / q / Success
+  st / q =[ c2 ]=> st' / q / Success -> (* Do we need to check for FAIL? *)
+  st / q =[ if b then c1 else c2 end ]=> st' / q / Success
 | E_WhileFalse : forall b st q c,
   beval st b = false ->
   st / q =[ while b do c end ]=> st / q / Success
@@ -102,7 +102,15 @@ if (X <= 1)
 end
 ]=> (Z !-> 4 ; X !-> 2) / [] / Success.
 Proof.
-  (* TODO *)
+  apply E_Seq with (X !-> 2; empty_st) [].
+  - (* Assignment command *)
+    apply E_Asgn.
+  - (* If command *)
+    apply E_IfFalse.
+    -- (* Condition evaluation *)
+      reflexivity.
+    -- (* Else command *)
+      apply E_Asgn. 
 Qed.
 
 
