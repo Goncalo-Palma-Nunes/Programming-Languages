@@ -63,10 +63,10 @@ Inductive ceval : com -> state -> list (state * com) ->
 | E_GuardTrue : forall st q b c,
   beval st b = true -> (* if the guard condition is true *)
   st / q =[ (b -> c) ]=> st / q / Success
-| E_GuardFalse_NoCont : forall st q b c,
+| E_GuardFalse_NoCont : forall st st' q b c,
   beval st b = false -> (* if the guard condition is false *)
   q = [] -> (* No remaining non-deterministic choices to execute *)
-  st / q =[ (b -> c) ]=> st / q / Fail
+  st / q =[ (b -> c) ]=> st' / q / Fail
 (* | E_GuardFalse_Cont : forall st q b c st' q',
   beval st b = false -> (* if the guard condition is false *)
   q = (st', c) :: q' -> (* Backtrack non-deterministic choice *)
@@ -120,8 +120,15 @@ empty_st / [] =[
    (X = 1) -> X:=3
 ]=> (empty_st) / [] / Fail.
 Proof.
-  (* TODO *)
-Qed. 
+  (* TODO - Check Pedro Lobo's question on slack*)
+  apply E_Seq with (X !-> 2; empty_st) [].
+  - (* Assignment command *)
+    apply E_Asgn.
+  - (* Guard command *)
+    apply E_GuardFalse_NoCont.
+    -- reflexivity.
+    -- reflexivity.
+Qed.
 
 Example ceval_example_guard2:
 empty_st / [] =[
