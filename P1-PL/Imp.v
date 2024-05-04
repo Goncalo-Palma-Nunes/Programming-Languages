@@ -16,6 +16,7 @@ From Coq Require Import Lia.
 From Coq Require Import Lists.List. Import ListNotations.
 From Coq Require Import Strings.String.
 From FirstProject Require Import Maps.
+Require Import Coq.Unicode.Utf8.
 
 (* Note that we follow the same convention as in the Imp chapter:
    our states are total maps
@@ -120,6 +121,16 @@ Fixpoint beval (st : state) (b : bexp) : bool :=
   | <{~ b1}>      => negb (beval st b1)
   | <{b1 && b2}>  => andb (beval st b1) (beval st b2)
   end.
+
+(** Some basic definitions for these are defined *)
+
+Definition aequiv (a1 a2 : aexp) : Prop :=
+  ∀ (st : state),
+    aeval st a1 = aeval st a2.
+
+Definition bequiv (b1 b2 : bexp) : Prop :=
+  ∀ (st : state),
+    beval st b1 = beval st b2.
 
 (** We specialize our notation for total maps to the specific case of
     states, i.e. using [(_ !-> 0)] as empty state. *)

@@ -3,6 +3,7 @@ From Coq Require Import Arith.Arith.
 From Coq Require Import List.
 Import ListNotations.
 From FirstProject Require Import Imp Maps.
+Require Import Coq.Unicode.Utf8.
 
 
 Inductive interpreter_result : Type :=
@@ -142,6 +143,102 @@ Proof. auto. Qed.
 (**
   2.2. TODO: Prove p1_equals_p2. Recall that p1 and p2 are defined in Imp.v
 *)
+
+(* c1 and c2 are considered equivalent if, given the same initial state 
+and the same number of steps, they produce the same result *)
+Definition cequiv (c1 c2 : com) : Prop :=
+  ∀ (st st' : state),
+    (∀ (X : string), st X = st' X) ->
+    ∀ (i : nat), ceval_step st c1 [] i = ceval_step st' c2 [] i.
+
+Lemma basic_assignment: forall (st : state) cont
+  (n : nat) (x : string) (i : nat),
+  i >= 1 ->
+  ceval_step st <{ x := n }> cont i = Success ((x !-> n ; st), cont).
+Proof.
+  intros st cont n x i H.
+  induction i.
+  - lia.
+  - simpl. reflexivity.
+Qed.
+
+(* Given any command, if there is no gas, then the evaluation returns
+outOfGas *)
+Lemma out_of_gas: forall (st : state) cont (c : com)
+  (n : nat) (x : string) (i : nat),
+  i = 0 ->
+  ceval_step st c cont i = OutOfGas.
+Proof.
+  intros st cont c n x i H.
+  rewrite H. reflexivity.
+Qed.
+
+Lemma skip_always_succeeds: forall (st : state) cont (c : com) (c1 : com)
+  (n : nat) (x : string) (i : nat),
+  ceval_step st c cont i = Success (st, cont) ->
+  c1 = <{ skip }> ->
+  i >= 1 ->
+  ceval_step st <{ c ; c1 }> cont i = Success (st, cont).
+Proof.
+  intros st cont c c1 n x i H H0 H1.
+  induction c.
+  - simpl. rewrite H0. destruct i.
+    -- lia.
+    -- 
+Admitted.
+
+Lemma seq_assoc: forall st cont c1 c2 c3
+  (n : nat) (x : string) (i : nat),
+  ceval_step st <{ c1 ; c2 ; c3 }> cont i = ceval_step st <{ c1 ; (c2 ; c3) }> cont i.
+Proof.
+  intros st cont c1 c2 c3 n x i.
+  induction i.
+  - simpl. reflexivity.
+  - simpl. reflexivity.
+Qed.
+
+Lemma seq_skip: forall st cont c1
+  (n : nat) (x : string) (i : nat),
+  i >= 1 ->
+  ceval_step st <{ c1 ; skip }> cont i = ceval_step st c1 cont i.
+Proof.
+  intros st cont c1 n x i H.
+  induction i.
+  - simpl. reflexivity.
+  - destruct c1.
+    -- simpl.
+  (* TODO *)
+Admitted.
+
+Lemma seq_skip_commutativity: forall st cont c1
+  (n : nat) (x : string) (i : nat),
+  ceval_step st <{ c1 ; skip }> cont i = ceval_step st <{ skip ; c1 }> cont i.
+Proof.
+  intros st cont c1 n x i.
+  induction i.
+  - simpl. reflexivity.
+  (* TODO *)
+Admitted.
+
+
+Lemma non_det_assignment : forall st cont
+  (n1 n2 : nat) (x1 x2 : string) (i : nat),
+  i >= 1 ->
+  ceval_step st <{ x1 := n1 !! x2 := n2 }> cont i = Success ((x1 !-> n1 ; st), cont).
+Proof.
+  intros st cont n1 n2 x1 x2 i H.
+  induction i.
+  - lia.
+  - rewrite <- IHi.
+  (* TODO *)
+Admitted.
+
+(* Lemma seq_cond_guard: forall st cont c
+  (n : nat) (x : string) (i : nat),
+  ceval_step st <{ x := n ; x = n -> skip }> cont i = ceval_step st <{ x := n; skip }> cont i.
+Proof.
+  intros st cont c n x i. *)
+
 (* For all possible states and continuations, there exists an amount of gas i0,
 such that any amount of gas i1 greater than or equal to i0, is enough for the evaluation
 (with ceval_step) of p1 and p2 to be the same. *)
@@ -149,8 +246,13 @@ Theorem p1_equals_p2: forall st cont,
   (exists i0,
     (forall i1, i1 >= i0 -> ceval_step st p1 cont i1 =  ceval_step st p2 cont i1)).
 Proof.
+  intros st cont. exists 10. intros i1 H.
+  destruct i1.
+  - simpl. reflexivity.
+  - simpl.
+  - 
   (* TODO *)
-Qed.
+Admitted.
 
 
 (**
@@ -165,5 +267,18 @@ Theorem ceval_step_more: forall i1 i2 st st' c cont cont',
   ceval_step st c cont i1 = Success (st', cont') ->
   ceval_step st c cont i2 = Success (st', cont').
 Proof.
-  (* TODO *)
-Qed.
+  induction i1 as [|i1' IH];
+  intros i2 st st' c cont cont' Hle Hceval.
+  - simpl in Hceval. discriminate Hceval.
+  - destruct i2 as [|i2']. inversion Hle.
+  assert (Hle': i1' <= i2') by lia.
+  destruct c.
+  + (* skip *)
+    simpl in Hceval. inversion Hceval. reflexivity.
+  + (* x := a *)
+    simpl in Hceval. inversion Hceval. reflexivity.
+  + (* c1 ; c2 *)
+    simpl in Hceval. simpl.
+    destruct (ceval_step st c1 cont i1') eqn:Heq1.
+    (* TODO *)
+Admitted.
