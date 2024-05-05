@@ -111,10 +111,10 @@ Inductive ceval : com -> state -> list (state * com) ->
                Rules
 **************************************)
 
-| E_GuardTrue : forall st st' q b c,
+| E_GuardTrue : forall st st' q b c r,
   beval st b = true -> (* if the guard condition is true *)
-  st / q =[ (b -> c) ]=> st' / q / Success
-
+  (* st / q =[ (b -> c) ]=> st' / q / Success *) (* TODO - should this return result instead of success? *)
+  st / q =[ (b -> c) ]=> st' / q / r
 | E_GuardFalse_NoCont : forall st st' q b c,
   beval st b = false -> (* if the guard condition is false *)
   q = [] -> (* No remaining non-deterministic choices to execute *)
@@ -369,13 +369,15 @@ Lemma cequiv_ex1:
 <{ X := 2; X = 2 -> skip }> == 
 <{ X := 2 }>.
 Proof.
-  apply conj. (* Prove each side of the /\ in cequiv *)
-  - unfold cequiv_imp.
-    intros st1 st2 q1 q2 result H.
-    exists q1. 
-
-
-Qed.
+  apply conj; (* Prove each side of the /\ in cequiv *)
+  unfold cequiv_imp;
+  intros st1 st2 q1 q2 result H.
+  - admit.
+  - exists q1.
+    apply E_Seq with (X !-> 2; st1) q1.
+      + apply E_Asgn.
+      + apply E_GuardTrue. reflexivity.
+Admitted. (* TODO - Finish *)
 
 Lemma cequiv_ex2:
 <{ (X := 1 !! X := 2); X = 2 -> skip }> == 
@@ -409,7 +411,7 @@ Proof.
       exists ((st1, <{c1; c2}>) :: q1).
       (* apply E_NonDet2. *)
       admit.
-Qed.
+Admitted. (* TODO - Finish *)
 
 Lemma choice_comm: forall c1 c2,
 <{ c1 !! c2 }> == <{ c2 !! c1 }>.
@@ -464,7 +466,7 @@ Proof.
   intros st1 st2 q1 q2 result H.
   - inversion H; subst. (* Right side *)
     + 
-Qed.
+Admitted. (* TODO - Finish *)
 
 Lemma choice_congruence: forall c1 c1' c2 c2',
 c1 == c1' -> c2 == c2' ->
