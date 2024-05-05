@@ -229,6 +229,7 @@ Proof.
   unfold cequiv_imp;
   intros st1 st2 q1 q2 result H.
   - inversion H; subst.
+    + exists q1.
 Qed.
 
 Lemma choice_comm: forall c1 c2,
@@ -254,7 +255,24 @@ Qed.
 Lemma choice_assoc: forall c1 c2 c3,
 <{ (c1 !! c2) !! c3 }> == <{ c1 !! (c2 !! c3) }>.
 Proof.
-  (* TODO *)
+  intros c1 c2 c3.
+  apply conj;
+  unfold cequiv_imp;
+  intros st1 st2 q1 q2 result H.
+  - inversion H; subst. (* Right side *)
+    + (* Case 1: (c2 !! c3) is chosen *)
+      exists ((st1, c1) :: q1).
+      apply E_NonDet2.
+    + (* Case 2: c1 is chosen *)
+      exists ((st1, <{c2 !! c3}>) :: q1).
+      apply E_NonDet1.
+  - inversion H; subst. (* Left Side *)
+    +  (* Case 1: (c1 !! c2) is chosen *)
+      exists ((st1, c3) :: q1).
+      apply E_NonDet1.
+    +   (* Case 2: c3 is chosen *)
+      exists ((st1, <{c1 !! c2}>) :: q1).
+      apply E_NonDet2.
 Qed.
 
 
