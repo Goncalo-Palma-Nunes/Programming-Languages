@@ -56,10 +56,10 @@ Inductive ceval : com -> state -> list (state * com) ->
   st1 / q1 =[ c ]=> st2 / q2 / Success -> (* Execute c *)
   st2 / q2 =[ while b do c end ]=> st3 / q3 / r -> (* Start next iteration with new state *)
   st1 / q1 =[ while b do c end ]=> st3 / q3 / r
-| E_NonDet1 : forall st q c1 c2,
-  st / q =[ c1 !! c2 ]=> st / ((st, c2) :: q) / Success
-| E_NonDet2 : forall st q c1 c2, (* Are both cases needed? *)
-  st / q =[ c1 !! c2 ]=> st / ((st, c1) :: q) / Success
+| E_NonDet1 : forall st st' q c1 c2,
+  st / q =[ c1 !! c2 ]=> st' / ((st, c2) :: q) / Success
+| E_NonDet2 : forall st st' q c1 c2, (* Are both cases needed? *)
+  st / q =[ c1 !! c2 ]=> st' / ((st, c1) :: q) / Success
 | E_GuardTrue : forall st st' q b c,
   beval st b = true -> (* if the guard condition is true *)
   st / q =[ (b -> c) ]=> st' / q / Success
@@ -149,7 +149,12 @@ empty_st / [] =[
    (X = 2) -> X:=3
 ]=> (X !-> 3) / q / Success.
 Proof.
-  (* TODO *)
+  replace (X !-> 3) with (X !-> 3; X !-> 2);
+  try apply t_update_shadow.
+  exists [(empty_st, CAsgn X 1)].
+  apply E_Seq with (X !-> 2; empty_st) [(empty_st, CAsgn X 1)].
+  - apply E_NonDet2.
+  - apply E_GuardTrue. reflexivity.
 Qed.
     
 Example ceval_example_guard4: exists q,
@@ -165,12 +170,16 @@ Qed.
 
 (* 3.2. Behavioral equivalence *)
 
+(* Two imp commands are said to be equivalent, if, when executed with the same
+initial state st1 and continuation list q1, they both reach the same end state
+st2 and result, but with different continuation lists *)
 Definition cequiv_imp (c1 c2 : com) : Prop := 
 forall (st1 st2 : state) q1 q2 result,
 (st1 / q1 =[ c1 ]=> st2 / q2 / result) ->
 exists q3, 
 (st1 / q1 =[ c2 ]=> st2 / q3 / result).
 
+(* Commutativity of program equivalence *)
 Definition cequiv (c1 c2 : com) : Prop :=
 cequiv_imp c1 c2 /\ cequiv_imp c2 c1.
 
@@ -185,7 +194,12 @@ Lemma cequiv_ex1:
 <{ X := 2; X = 2 -> skip }> == 
 <{ X := 2 }>.
 Proof.
-  (* TODO *)
+  apply conj. (* Prove each side of the /\ in cequiv *)
+  - unfold cequiv_imp.
+    intros st1 st2 q1 q2 result H.
+    exists q1. 
+
+
 Qed.
 
 Lemma cequiv_ex2:
@@ -199,7 +213,11 @@ Qed.
 Lemma choice_idempotent: forall c,
 <{ c !! c }> == <{ c }>.
 Proof.
-  (* TODO *)
+  intros c.
+  apply conj;
+  unfold cequiv_imp;
+  intros st1 st2 q1 q2 result H.
+  - inversion H; subst.
 Qed.
 
 Lemma choice_comm: forall c1 c2,
