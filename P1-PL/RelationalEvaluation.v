@@ -67,19 +67,19 @@ Inductive ceval : com -> state -> list (state * com) ->
   beval st b = false -> (* if the guard condition is false *)
   q = [] -> (* No remaining non-deterministic choices to execute *)
   st / q =[ (b -> c) ]=> st' / q / Fail
-(* | E_GuardFalse_Cont : forall st q b c st' q',
+| E_GuardFalse_Cont : forall st st' q q' b c c',
   beval st b = false -> (* if the guard condition is false *)
-  q = (st', c) :: q' -> (* Backtrack non-deterministic choice *)
-  st' / q' =[ (b -> c) ]=> st / q / Success 
-  
-  This case is still wrong, I think.
-  
+  q <> [] -> (* There are remaining non-deterministic choices to execute *)
+  q = (st, c') :: q' -> (* Get the next state and command *)
+  st / q' =[ c' ]=> st' / q' / Success -> (* Backtrack *)
+  st / q =[ (b -> c) ]=> st' / q' / Success
+(*
   We ought to:
     - start at state st / q
     - See that beval st b = false
-    - backtrack to state st' / q' and execute command c
+    - backtrack to state st / q' and execute command c
         - q' is q without the state we are now backtracking to 
-    - Get to a new state st'' / q''
+    - Get to a new state st' / q'
   *)
 
 
@@ -143,6 +143,7 @@ Proof.
     apply E_GuardTrue. reflexivity.
 Qed. 
 
+(* Pick second command in non-deterministic constructor *)
 Example ceval_example_guard3: exists q,
 empty_st / [] =[
    (X := 1 !! X := 2);
@@ -150,20 +151,30 @@ empty_st / [] =[
 ]=> (X !-> 3) / q / Success.
 Proof.
   replace (X !-> 3) with (X !-> 3; X !-> 2);
-  try apply t_update_shadow.
-  exists [(empty_st, CAsgn X 1)].
+  try apply t_update_shadow. (* Update map with final state *)
+  exists [(empty_st, CAsgn X 1)]. (* Final continuation list *)
   apply E_Seq with (X !-> 2; empty_st) [(empty_st, CAsgn X 1)].
-  - apply E_NonDet2.
-  - apply E_GuardTrue. reflexivity.
+  - (* Non-deterministic choice *)
+    apply E_NonDet2.
+  - (* Guard command *)
+    apply E_GuardTrue. reflexivity.
 Qed.
-    
+
+(* Pick first command in non-deterministic constructor *)  
 Example ceval_example_guard4: exists q,
 empty_st / [] =[
    (X := 1 !! X := 2);
    (X = 2) -> X:=3
 ]=> (X !-> 3) / q / Success.
 Proof.
-  (* TODO *)
+  exists [(empty_st, CAsgn X 2)]. (* Final continuation list *)
+  replace (X !-> 3) with (X !-> 3; X !-> 1);
+  try apply t_update_shadow. (* Update map with final state *)
+  apply E_Seq with (X !-> 1; empty_st) [(empty_st, CAsgn X 2)].
+  - (* Non-deterministic choice *)
+    apply E_NonDet1.
+  - (* Guard command *)
+    apply E_GuardFalse_Cont.
 Qed.
 
 
@@ -223,7 +234,21 @@ Qed.
 Lemma choice_comm: forall c1 c2,
 <{ c1 !! c2 }> == <{ c2 !! c1 }>.
 Proof.
-  (* TODO *)
+  intros c1 c2. (*take c1, c2, without loss of generality *)
+  unfold cequiv.
+  apply conj;
+  unfold cequiv_imp;
+  intros st1 st2 q1 q2 result H.
+  - inversion H; subst.
+    + exists ((st1, c2) :: q1).
+      apply E_NonDet2.
+    + exists ((st1, c1) :: q1).
+      apply E_NonDet1.
+  - inversion H; subst.
+    + exists ((st1, c2) :: q1).
+      apply E_NonDet1.
+    + exists ((st1, c1) :: q1).
+      apply E_NonDet2.
 Qed.
 
 Lemma choice_assoc: forall c1 c2 c3,
