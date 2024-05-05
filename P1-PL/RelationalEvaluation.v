@@ -286,5 +286,22 @@ Lemma choice_congruence: forall c1 c1' c2 c2',
 c1 == c1' -> c2 == c2' ->
 <{ c1 !! c2 }> == <{ c1' !! c2' }>.
 Proof.
-  (* TODO *)
+  intros c1 c1' c2 c2' H1 H2.
+  apply conj;
+  unfold cequiv_imp;
+  intros st1 st2 q1 q2 result H.
+  - inversion H; subst. (* Right side *)
+    + (* Case 1: c1' is chosen *)
+      exists ((st1, c2') :: q1).
+      apply E_NonDet1.
+    + (* Case 2: c2' is chosen *)
+      exists ((st1, c1') :: q1).
+      apply E_NonDet2.
+  - inversion H; subst. (* Left Side *)
+    + (* Case 1: c1 is chosen *)
+      exists ((st1, c2) :: q1).
+      apply E_NonDet1.
+    + (* Case 2: c2 is chosen *)
+      exists ((st1, c1) :: q1).
+      apply E_NonDet2.
 Qed.
