@@ -365,6 +365,22 @@ Infix "==" := cequiv (at level 99).
   3.2. TODO: Prove the properties below.
 *)
 
+Property asgn_always_succeeds: forall (st : state) cont
+  (n : nat) (x : string) result (st' : state),
+  (* st / cont =[ x := n ]=> (x !-> n ; st) / cont / result ->
+  st / cont =[ x := n ]=> (x !-> n ; st) / cont / Success. *)
+  st' = (x !-> n ; st) ->
+  st / cont =[ x := n ]=> st' / cont / result ->
+  st / cont =[ x := n ]=> st' / cont / Success.
+Proof.
+  intros st cont n x result st' H H0.
+  inversion H0; subst.
+  apply H0.
+  (* intros st cont n x i result H.
+  inversion H; subst.
+  apply H. *)
+Qed.
+
 Lemma cequiv_ex1:
 <{ X := 2; X = 2 -> skip }> == 
 <{ X := 2 }>.
@@ -372,11 +388,16 @@ Proof.
   apply conj; (* Prove each side of the /\ in cequiv *)
   unfold cequiv_imp;
   intros st1 st2 q1 q2 result H.
+  - inversion H; subst.
+    + exists q1. 
+     (*apply asgn_always_succeeds with .*)
+    admit.
+    + exists q2. apply H7.
   - admit.
-  - exists q1.
-    apply E_Seq with (X !-> 2; st1) q1.
-      + apply E_Asgn.
-      + apply E_GuardTrue. reflexivity.
+  (* - exists q1. *)
+    (* apply E_Seq with (X !-> 2; st1) q1. *)
+      (* + apply E_Asgn. *)
+      (* + apply E_GuardTrue. reflexivity. *)
 Admitted. (* TODO - Finish *)
 
 Lemma cequiv_ex2:
@@ -465,7 +486,6 @@ Proof.
   unfold cequiv_imp;
   intros st1 st2 q1 q2 result H.
   - inversion H; subst. (* Right side *)
-    + 
 Admitted. (* TODO - Finish *)
 
 Lemma choice_congruence: forall c1 c1' c2 c2',
@@ -491,3 +511,35 @@ Proof.
       exists ((st1, c1) :: q1).
       apply E_NonDet2.
 Qed.
+
+Theorem skip_left : forall c,
+  <{ skip ; c }> == c.
+Proof.
+  intros c.
+  apply conj;
+  unfold cequiv_imp;
+  intros st1 st2 q1 q2 result H.
+  - inversion H; subst.
+    + inversion H2; subst.
+      exists q2.
+      apply H8.
+    + inversion H7.
+  - exists q2.
+    apply E_Seq with st1 q1.
+    + apply E_Skip.
+    + apply H.
+Qed.
+
+(* Theorem skip_right : forall c,
+  <{ c ; skip }> == c.
+Proof.
+  intros c.
+  apply conj;
+  unfold cequiv_imp;
+  intros st1 st2 q1 q2 result H.
+  - inversion H; subst.
+    + admit.
+    + admit.
+  - exists q2. apply E_Seq with st2 q2.
+    + admit.
+    + apply E_Skip. *)
