@@ -40,6 +40,9 @@ Inductive ceval : com -> state -> list (state * com) ->
   st1 / q1 =[ c1 ]=> st2 / q2 / Success ->
   st2 / q2 =[ c2 ]=> st3 / q3 / r ->
   st1 / q1 =[ c1 ; c2 ]=> st3 / q3 / r (* Do we need to check for FAIL? *)
+| E_SeqFT : forall st1 q1 c1 st2 q2 c2,
+  st1 / q1 =[ c1 ]=> st2 / q2 / Fail ->
+  st1 / q1 =[ c1 ; c2 ]=> st2 / q2 / Fail
 | E_IfTrue : forall st q b c1 c2,
   beval st b = true ->
   st / q =[ c1 ]=> st / q / Success -> (* Do we need to check for FAIL? *)
@@ -113,6 +116,22 @@ Proof.
       apply E_Asgn. 
 Qed.
 
+Example ceval_example_guard0:
+empty_st / [] =[
+   X := 4;
+   (X = 1) -> X:=3;
+   X := 2
+]=> (X !-> 4) / [] / Fail. (* also works if end state is empty_st *)
+Proof.
+  apply E_Seq with (X !-> 4; empty_st) [].
+  - (* Assignment command *)
+    apply E_Asgn.
+  - (* Guard command *)
+    apply E_SeqFT.
+    apply E_GuardFalse_NoCont.
+    -- reflexivity.
+    -- reflexivity.
+Qed.
 
 Example ceval_example_guard1:
 empty_st / [] =[
@@ -120,7 +139,6 @@ empty_st / [] =[
    (X = 1) -> X:=3
 ]=> (empty_st) / [] / Fail.
 Proof.
-  (* TODO - Check Pedro Lobo's question on slack*)
   apply E_Seq with (X !-> 2; empty_st) [].
   - (* Assignment command *)
     apply E_Asgn.
@@ -229,7 +247,22 @@ Proof.
   unfold cequiv_imp;
   intros st1 st2 q1 q2 result H.
   - inversion H; subst.
-    + exists q1.
+    + exists ((st1, c) :: q1).
+      admit.
+    + exists ((st1, c) :: q1).
+      admit.
+  - inversion H; subst.
+    (* c = c, so we always apply the first case of the non-deterministic choice*)
+    + (* c = <{ skip }> *)
+      exists ((st2, <{skip}>) :: q2).
+      apply E_NonDet1.
+    + (* c = <{ X := a }> *)
+      exists ((st1, <{X := a}>) :: q2).
+      apply E_NonDet1.
+    + (* c = <{ c1; c2 }> *)
+      exists ((st1, <{c1; c2}>) :: q1).
+      (* apply E_NonDet2. *)
+      admit.
 Qed.
 
 Lemma choice_comm: forall c1 c2,
@@ -279,7 +312,12 @@ Qed.
 Lemma choice_seq_distr_l: forall c1 c2 c3,
 <{ c1 ; (c2 !! c3)}> == <{ (c1;c2) !! (c1;c3) }>.
 Proof.
-  (* TODO *)
+  intros c1 c2 c3.
+  apply conj;
+  unfold cequiv_imp;
+  intros st1 st2 q1 q2 result H.
+  - inversion H; subst. (* Right side *)
+    + 
 Qed.
 
 Lemma choice_congruence: forall c1 c1' c2 c2',
