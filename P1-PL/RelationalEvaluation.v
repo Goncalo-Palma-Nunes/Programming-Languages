@@ -33,43 +33,93 @@ Reserved Notation "st1 '/' q1 '=[' c ']=>' st2 '/' q2 '/' r"
 Inductive ceval : com -> state -> list (state * com) -> 
           result -> state -> list (state * com) -> Prop :=
 | E_Skip : forall st q,
+  (* Skip always succeeds *)
  st / q =[ skip ]=> st / q / Success
+
 | E_Asgn : forall st q X a,
+  (* Assignment always succeeds *)
  st / q =[ X := a ]=> (X !-> aeval st a ; st) / q / Success
+
+(*************************************
+        Sequence Rules
+**************************************)
+
 | E_Seq : forall st1 q1 c1 st2 q2 c2 st3 q3 r,
+  (* if first command succeeds, the end result is the same as the result
+   or running the second command after the first *)
   st1 / q1 =[ c1 ]=> st2 / q2 / Success ->
   st2 / q2 =[ c2 ]=> st3 / q3 / r ->
-  st1 / q1 =[ c1 ; c2 ]=> st3 / q3 / r (* Do we need to check for FAIL? *)
+  st1 / q1 =[ c1 ; c2 ]=> st3 / q3 / r
+
 | E_SeqFT : forall st1 q1 c1 st2 q2 c2,
+  (* if first command fails, the sequence fails *)
   st1 / q1 =[ c1 ]=> st2 / q2 / Fail ->
   st1 / q1 =[ c1 ; c2 ]=> st2 / q2 / Fail
-| E_IfTrue : forall st q b c1 c2,
+
+(*************************************
+              If Rules
+**************************************)
+
+| E_IfTrue : forall st q b c1 c2 r,
+  (* if the condition is true, the result is the same as running the first command *)
   beval st b = true ->
-  st / q =[ c1 ]=> st / q / Success -> (* Do we need to check for FAIL? *)
-  st / q =[ if b then c1 else c2 end ]=> st / q / Success
-| E_IfFalse : forall st st' q b c1 c2,
+  st / q =[ c1 ]=> st / q / r ->
+  st / q =[ if b then c1 else c2 end ]=> st / q / r
+
+| E_IfFalse : forall st st' q b c1 c2 r,
+  (* if the condition is false, the result is the same as running the second command *)
   beval st b = false ->
-  st / q =[ c2 ]=> st' / q / Success -> (* Do we need to check for FAIL? *)
-  st / q =[ if b then c1 else c2 end ]=> st' / q / Success
+  st / q =[ c2 ]=> st' / q / r ->
+  st / q =[ if b then c1 else c2 end ]=> st' / q / r
+
+(*************************************
+              While Rules
+**************************************)
+
 | E_WhileFalse : forall b st q c,
+  (* if the condition is false, the result is success and neither the
+  state nor the continuation list are changed *)
   beval st b = false ->
   st / q =[ while b do c end ]=> st / q / Success
-| E_WhileTrue : forall b st1 q1 c st2 q2 st3 q3 r,
+
+| E_WhileTrueSucceed : forall b st1 q1 c st2 q2 st3 q3 r,
+  (* if the condition is true and the command succeeds, the result is the same as
+  running the command again with the new state *)
   beval st1 b = true -> (* If true *)
   st1 / q1 =[ c ]=> st2 / q2 / Success -> (* Execute c *)
   st2 / q2 =[ while b do c end ]=> st3 / q3 / r -> (* Start next iteration with new state *)
   st1 / q1 =[ while b do c end ]=> st3 / q3 / r
+
+| E_WhileTrueFail : forall b st1 q1 c st2 q2,
+  (* if the condition is true and the command fails, the result is fail *)
+  beval st1 b = true -> (* If true *)
+  st1 / q1 =[ c ]=> st2 / q2 / Fail -> (* Execute c *)
+  st1 / q1 =[ while b do c end ]=> st2 / q2 / Fail
+
+(*************************************
+        Non Deterministic Choice
+               Rules
+**************************************)
+
 | E_NonDet1 : forall st st' q c1 c2,
   st / q =[ c1 !! c2 ]=> st' / ((st, c2) :: q) / Success
 | E_NonDet2 : forall st st' q c1 c2, (* Are both cases needed? *)
   st / q =[ c1 !! c2 ]=> st' / ((st, c1) :: q) / Success
+
+(*************************************
+          Conditional Guard
+               Rules
+**************************************)
+
 | E_GuardTrue : forall st st' q b c,
   beval st b = true -> (* if the guard condition is true *)
   st / q =[ (b -> c) ]=> st' / q / Success
+
 | E_GuardFalse_NoCont : forall st st' q b c,
   beval st b = false -> (* if the guard condition is false *)
   q = [] -> (* No remaining non-deterministic choices to execute *)
   st / q =[ (b -> c) ]=> st' / q / Fail
+
 | E_GuardFalse_Cont : forall st st' q q' b c c',
   beval st b = false -> (* if the guard condition is false *)
   q <> [] -> (* There are remaining non-deterministic choices to execute *)
