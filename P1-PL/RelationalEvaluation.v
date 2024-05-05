@@ -60,17 +60,17 @@ Inductive ceval : com -> state -> list (state * com) ->
               If Rules
 **************************************)
 
-| E_IfTrue : forall st q b c1 c2 r,
+| E_IfTrue : forall st st' q b c1 c2 r,
   (* if the condition is true, the result is the same as running the first command *)
   beval st b = true ->
-  st / q =[ c1 ]=> st / q / r ->
-  st / q =[ if b then c1 else c2 end ]=> st / q / r
+  st / q =[ c1 ]=> st' / q / r ->
+  st / q =[ if b then c1 else c2 end ]=> st' / q / r (* TODO - Could we need a q' ?*)
 
 | E_IfFalse : forall st st' q b c1 c2 r,
   (* if the condition is false, the result is the same as running the second command *)
   beval st b = false ->
   st / q =[ c2 ]=> st' / q / r ->
-  st / q =[ if b then c1 else c2 end ]=> st' / q / r
+  st / q =[ if b then c1 else c2 end ]=> st' / q / r (* TODO - Could we need a q' ?*)
 
 (*************************************
               While Rules
@@ -146,6 +146,25 @@ where "st1 '/' q1 '=[' c ']=>' st2 '/' q2 '/' r" := (ceval c st1 q1 r st2 q2).
              ceval_example_guard3 and ceval_example_guard4.
 *)
 
+Example ceval_example_seq_asgn:
+empty_st / [] =[
+X := 2;
+Y := 3;
+Z := 4
+]=> (Z !-> 4 ; Y !-> 3 ; X !-> 2) / [] / Success.
+Proof.
+  apply E_Seq with (X !-> 2; empty_st) [].
+  - (* Assignment command *)
+    apply E_Asgn.
+  - (* Sequence command *)
+    apply E_Seq with (Y !-> 3; X !-> 2) [].
+    + (* Assignment command *)
+      apply E_Asgn.
+    + (* Assignment command *)
+      apply E_Asgn.
+Qed.
+
+
 Example ceval_example_if:
 empty_st / [] =[
 X := 2;
@@ -164,6 +183,26 @@ Proof.
       reflexivity.
     -- (* Else command *)
       apply E_Asgn. 
+Qed.
+
+Example ceval_example_if2:
+empty_st / [] =[
+X := 2;
+if (X = 2)
+  then Y := 3
+  else Z := 4
+end
+]=> (Y !-> 3 ; X !-> 2) / [] / Success.
+Proof.
+  apply E_Seq with (X !-> 2; empty_st) [].
+  - (* Assignment command *)
+    apply E_Asgn.
+  - (* If command *)
+    apply E_IfTrue.
+    -- (* Condition evaluation *)
+      reflexivity.
+    -- (* Then command *)
+      apply E_Asgn.
 Qed.
 
 Example ceval_example_guard0:
@@ -245,7 +284,35 @@ Proof.
     apply E_GuardFalse_Cont.
 Qed.
 
+Example ceval_example_while1: exists q,
+empty_st / [] =[
+   X := 1;
+    while (X = 5) do X := X + 1 end
+]=> (X !-> 1) / q / Success.
+Proof.
+  exists []. (* Final continuation list *)
+  apply E_Seq with (X !-> 1; empty_st) [].
+  - (* Assignment command *)
+    apply E_Asgn.
+  - (* While command *)
+    apply E_WhileFalse. reflexivity.
+Qed.
 
+Example ceval_example_while2: exists q,
+empty_st / [] =[
+   X := 1;
+    while (X <= 5) do X := X + 1 end
+]=> (X !-> 5) / q / Success.
+Proof.
+  exists []. (* Final continuation list *)
+  apply E_Seq with (X !-> 1; empty_st) [].
+  - (* Assignment command *)
+    apply E_Asgn.
+  - (* While command *)
+
+  (* TODO - (We don't really need to prove this example, we added it
+  ourselves)*)
+Admitted.
 
 (* 3.2. Behavioral equivalence *)
 
