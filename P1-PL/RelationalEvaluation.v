@@ -284,6 +284,31 @@ Proof.
     apply E_GuardFalse_Cont.
 Qed.
 
+Example ceval_example_seq_fail: exists q,
+empty_st / [] =[
+   X := 1;
+   (Y := 2; Y := 2);
+   (Y = 3) -> Z := 4
+]=> (Y !-> 2; X !-> 1) / q / Fail.
+Proof.
+  exists []. (* Final continuation list *)
+  apply E_Seq with (X !-> 1; empty_st) [].
+  - (* Assignment command *)
+    apply E_Asgn.
+  - (* Sequence command *)
+    apply E_Seq with (Y !-> 2; Y !-> 2; X !-> 1) [].
+    + (* Assignment command *)
+      apply E_Seq with (Y !-> 2; X !-> 1) [].
+      * (* Assignment command *)
+        apply E_Asgn.
+      * (* Assignment command *)
+        apply E_Asgn.
+    + (* Guard command *)
+      apply E_GuardFalse_NoCont.
+      * reflexivity.
+      * reflexivity.
+Qed.
+
 Example ceval_example_while1: exists q,
 empty_st / [] =[
    X := 1;
@@ -301,18 +326,22 @@ Qed.
 Example ceval_example_while2: exists q,
 empty_st / [] =[
    X := 1;
-    while (X <= 5) do X := X + 1 end
-]=> (X !-> 5) / q / Success.
+    while (X <= 2) do X := X + 1 end
+]=> (X !-> 3; X !-> 2; X !-> 1) / q / Success.
 Proof.
   exists []. (* Final continuation list *)
   apply E_Seq with (X !-> 1; empty_st) [].
   - (* Assignment command *)
     apply E_Asgn.
   - (* While command *)
-
-  (* TODO - (We don't really need to prove this example, we added it
-  ourselves)*)
-Admitted.
+    apply E_WhileTrueSucceed with (X !-> 2; X !-> 1; empty_st) [].
+    + reflexivity.
+    + apply E_Asgn.
+    + apply E_WhileTrueSucceed with (X !-> 3; X !-> 2; X !-> 1; empty_st) [].
+      * reflexivity.
+      * apply E_Asgn.
+      * apply E_WhileFalse. reflexivity.
+Qed.
 
 (* 3.2. Behavioral equivalence *)
 
