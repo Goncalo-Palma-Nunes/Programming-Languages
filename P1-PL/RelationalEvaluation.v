@@ -113,8 +113,8 @@ Inductive ceval : com -> state -> list (state * com) ->
 
 | E_GuardTrue : forall st st' q b c r,
   beval st b = true -> (* if the guard condition is true *)
-  (* st / q =[ (b -> c) ]=> st' / q / Success *) (* TODO - should this return result instead of success? *)
   st / q =[ (b -> c) ]=> st' / q / r
+
 | E_GuardFalse_NoCont : forall st st' q b c,
   beval st b = false -> (* if the guard condition is false *)
   q = [] -> (* No remaining non-deterministic choices to execute *)
@@ -125,7 +125,7 @@ Inductive ceval : com -> state -> list (state * com) ->
   q <> [] -> (* There are remaining non-deterministic choices to execute *)
   q = (st, c') :: q' -> (* Get the next state and command *)
   st / q' =[ c' ]=> st' / q' / Success -> (* Backtrack *)
-  st / q =[ (b -> c) ]=> st' / q' / Success
+  st / q =[ (b -> c) ]=> st' / q' / Success (* TODO - Success should be result*)
 (*
   We ought to:
     - start at state st / q
@@ -267,6 +267,12 @@ Proof.
     apply E_GuardTrue. reflexivity.
 Qed.
 
+Property cont_not_empty: forall cont (st : state) (c : com),
+cont = (st, c) :: cont ->
+cont <> [].
+Proof.
+Qed.
+
 (* Pick first command in non-deterministic constructor *)  
 Example ceval_example_guard4: exists q,
 empty_st / [] =[
@@ -281,7 +287,11 @@ Proof.
   - (* Non-deterministic choice *)
     apply E_NonDet1.
   - (* Guard command *)
-    apply E_GuardFalse_Cont.
+    apply E_GuardFalse_Cont with <{X := 3}>.
+      + reflexivity.
+      + apply cont_not_empty with empty_st (CAsgn X 2). admit.
+      + admit.
+      + apply E_Asgn.
 Qed.
 
 Example ceval_example_seq_fail: exists q,
@@ -341,6 +351,28 @@ Proof.
       * reflexivity.
       * apply E_Asgn.
       * apply E_WhileFalse. reflexivity.
+Qed.
+
+Example ceval_example_while3: exists q,
+empty_st / [] =[
+   X := 1;
+    while (X <= 2) do (X = 1) -> (X := X + 1) end
+]=> (X !-> 3; X !-> 2; X !-> 1) / q / Fail.
+Proof.
+  exists []. (* Final continuation list *)
+  apply E_Seq with (X !-> 1; empty_st) [].
+  - (* Assignment command *)
+    apply E_Asgn.
+  - (* While command *)
+    apply E_WhileTrueSucceed with (X !-> 2; X !-> 1; empty_st) [].
+    + reflexivity. (* Condition is true *)
+    + apply E_GuardTrue. (* Guard is true *)
+      reflexivity.
+    + apply E_WhileTrueFail. (* Guard is true, but command fails *)
+      -- reflexivity. (* Condition is true *)
+      -- apply E_GuardFalse_NoCont.
+        ++ reflexivity. (* Guard is false *)
+        ++ reflexivity. (* No remaining non-deterministic choices *)
 Qed.
 
 (* 3.2. Behavioral equivalence *)
