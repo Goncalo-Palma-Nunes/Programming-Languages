@@ -5,7 +5,6 @@ Import ListNotations.
 From FirstProject Require Import Imp Maps.
 Require Import Coq.Unicode.Utf8.
 
-
 Inductive interpreter_result : Type :=
   | Success (s: state * (list (state*com)))
   | Fail
@@ -69,8 +68,6 @@ Fixpoint ceval_step (st : state) (c : com) (continuation: list (state * com)) (i
               end
           end
   end.
-
-
 
 (* Helper functions that help with running the interpreter *)
 Inductive show_result : Type :=
@@ -244,16 +241,27 @@ such that any amount of gas i1 greater than or equal to i0, is enough for the ev
 (with ceval_step) of p1 and p2 to be the same. *)
 Theorem p1_equals_p2: forall st cont,
   (exists i0,
-    (forall i1, i1 >= i0 -> ceval_step st p1 cont i1 =  ceval_step st p2 cont i1)).
+    (forall i1, i1 >= i0 -> ceval_step st p1 cont i1 = ceval_step st p2 cont i1)).
 Proof.
-  intros st cont. exists 10. intros i1 H.
-  destruct i1.
-  - simpl. reflexivity.
-  - simpl.
-  - 
-  (* TODO *)
+  intros st cont. exists 5. intros i1 H.
+  assert (H1: exists i2, i1 = S (S (S (S (S i2))))). {
+    destruct i1.
+    - lia.
+    - destruct i1.
+      + lia.
+      + destruct i1.
+        * lia.
+        * destruct i1.
+          -- lia.
+          -- destruct i1.
+            ++ lia.
+            ++ exists i1. reflexivity.
+  }
+  destruct H1 as [i2 H1].
+  rewrite H1.
+  induction i2.
+  - simpl. 
 Admitted.
-
 
 (**
   2.3. TODO: Prove ceval_step_more.
