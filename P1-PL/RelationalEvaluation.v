@@ -276,12 +276,6 @@ Proof.
     apply E_GuardTrue. reflexivity.
 Qed.
 
-(* Property cont_not_empty: forall cont (st : state) (c : com),
-cont = (st, c) :: cont ->
-cont <> [].
-Proof.
-Qed. *)
-
 (* Pick first command in non-deterministic constructor *)  
 Example ceval_example_guard4: exists q,
 empty_st / [] =[
@@ -582,17 +576,3 @@ Proof.
     + apply E_Skip.
     + apply H.
 Qed.
-
-(* Theorem skip_right : forall c,
-  <{ c ; skip }> == c.
-Proof.
-  intros c.
-  apply conj;
-  unfold cequiv_imp;
-  intros st1 st2 q1 q2 result H.
-  - inversion H; subst.
-    + admit.
-    + admit.
-  - exists q2. apply E_Seq with st2 q2.
-    + admit.
-    + apply E_Skip. *)
