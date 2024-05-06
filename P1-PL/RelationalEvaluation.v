@@ -501,12 +501,13 @@ Proof.
     + exists ((st1, c1) :: q1).
       apply E_NonDet1.
       apply H7.
-  - inversion H; subst.
-    + exists ((st1, c2) :: q1).
-      apply E_NonDet1. admit.
-    + exists ((st1, c1) :: q1).
-      apply E_NonDet2. admit.
-Admitted.
+  - exists q2.
+    inversion H; subst.
+    + apply E_NonDet2.
+      apply H7.
+    + apply E_NonDet1.
+      apply H7.
+Qed.
 
 Lemma choice_assoc: forall c1 c2 c3,
 <{ (c1 !! c2) !! c3 }> == <{ c1 !! (c2 !! c3) }>.
