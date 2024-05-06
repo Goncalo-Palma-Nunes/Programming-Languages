@@ -101,10 +101,17 @@ Inductive ceval : com -> state -> list (state * com) ->
                Rules
 **************************************)
 
-| E_NonDet1 : forall st st' q c1 c2,
-  st / q =[ c1 !! c2 ]=> st' / ((st, c2) :: q) / Success
-| E_NonDet2 : forall st st' q c1 c2, (* Are both cases needed? *)
-  st / q =[ c1 !! c2 ]=> st' / ((st, c1) :: q) / Success
+| E_NonDet1 : forall st st' q c1 c2 r,
+(* Result is the same as the result of running the command picked
+non deterministically, with state st and continuation list q *)
+  st / q =[ c1 ]=> st' / q / r -> (* Should q = ((st, c2) :: q) *)
+  st / q =[ c1 !! c2 ]=> st' / ((st, c2) :: q) / r
+
+| E_NonDet2 : forall st st' q c1 c2 r,
+(* Result is the same as the result of running the command picked
+non deterministically, with state st and continuation list q *)
+  st / q =[ c2 ]=> st' / q / r ->
+  st / q =[ c1 !! c2 ]=> st' / ((st, c1) :: q) / r
 
 (*************************************
           Conditional Guard
@@ -120,12 +127,13 @@ Inductive ceval : com -> state -> list (state * com) ->
   q = [] -> (* No remaining non-deterministic choices to execute *)
   st / q =[ (b -> c) ]=> st' / q / Fail
 
-| E_GuardFalse_Cont : forall st st' q q' b c c',
+| E_GuardFalse_Cont : forall st st' st'' st''' q q' q'' q''' b c c' r,
   beval st b = false -> (* if the guard condition is false *)
   q <> [] -> (* There are remaining non-deterministic choices to execute *)
-  q = (st, c') :: q' -> (* Get the next state and command *)
-  st / q' =[ c' ]=> st' / q' / Success -> (* Backtrack *)
-  st / q =[ (b -> c) ]=> st' / q' / Success (* TODO - Success should be result*)
+  q = (st'', c') :: q'' -> (* Get the next state and command *)
+  st / q'' =[ c' ]=> st''' / q''' / r -> (* Backtrack *)
+  (* q''', because c' could itself be another non deterministic choice command *)
+  st / q =[ (b -> c) ]=> st' / q' / r (* Success depends result on result of backtracking*)
 (*
   We ought to:
     - start at state st / q
@@ -262,16 +270,17 @@ Proof.
   exists [(empty_st, CAsgn X 1)]. (* Final continuation list *)
   apply E_Seq with (X !-> 2; empty_st) [(empty_st, CAsgn X 1)].
   - (* Non-deterministic choice *)
-    apply E_NonDet2.
+    apply E_NonDet2. 
+    apply E_Asgn. (* result depends on result of the command picked *)
   - (* Guard command *)
     apply E_GuardTrue. reflexivity.
 Qed.
 
-Property cont_not_empty: forall cont (st : state) (c : com),
+(* Property cont_not_empty: forall cont (st : state) (c : com),
 cont = (st, c) :: cont ->
 cont <> [].
 Proof.
-Qed.
+Qed. *)
 
 (* Pick first command in non-deterministic constructor *)  
 Example ceval_example_guard4: exists q,
@@ -286,12 +295,13 @@ Proof.
   apply E_Seq with (X !-> 1; empty_st) [(empty_st, CAsgn X 2)].
   - (* Non-deterministic choice *)
     apply E_NonDet1.
+    apply E_Asgn. (* result depends on result of the command picked *)
   - (* Guard command *)
-    apply E_GuardFalse_Cont with <{X := 3}>.
-      + reflexivity.
-      + apply cont_not_empty with empty_st (CAsgn X 2). admit.
-      + admit.
-      + apply E_Asgn.
+    apply E_GuardFalse_Cont with empty_st (X !-> 2; X !-> 1) [] [] <{X := 2}>.
+      + reflexivity. (* Guard is false *)
+      + discriminate. (* There are more non-deterministic choices *)
+      + reflexivity. (* State to backtrack to *)
+      + apply E_Asgn. (* Execute with new context *)
 Qed.
 
 Example ceval_example_seq_fail: exists q,
@@ -375,6 +385,23 @@ Proof.
         ++ reflexivity. (* No remaining non-deterministic choices *)
 Qed.
 
+Example ceval_example_guard_inside_nonDet: exists q,
+empty_st / [] =[
+   X := 1;
+   (((X = 2) -> X := 3) !! ((X = 3) -> X := 2))
+]=> (X !-> 1) / q / Fail.
+Proof.
+  exists [(X !-> 1, <{ X = 3 -> X := 2 }>)]. (* Final continuation list *)
+  apply E_Seq with (X !-> 1; empty_st) [].
+  - (* Assignment command *)
+    apply E_Asgn.
+  - (* Non-deterministic choice *)
+    apply E_NonDet1.
+    apply E_GuardFalse_NoCont.
+    + reflexivity. (* Guard is false *)
+    + reflexivity. (* No remaining non-deterministic choices *)
+Qed.
+
 (* 3.2. Behavioral equivalence *)
 
 (* Two imp commands are said to be equivalent, if, when executed with the same
@@ -437,7 +464,7 @@ Lemma cequiv_ex2:
 <{ X := 2 }>.
 Proof.
   (* TODO *)
-Qed.
+Admitted.
 
 
 Lemma choice_idempotent: forall c,
@@ -447,22 +474,21 @@ Proof.
   apply conj;
   unfold cequiv_imp;
   intros st1 st2 q1 q2 result H.
-  - inversion H; subst.
-    + exists ((st1, c) :: q1).
-      admit.
-    + exists ((st1, c) :: q1).
-      admit.
+  - inversion H; 
+    subst; 
+    exists q1; 
+    apply H7.
   - inversion H; subst.
     (* c = c, so we always apply the first case of the non-deterministic choice*)
     + (* c = <{ skip }> *)
       exists ((st2, <{skip}>) :: q2).
-      apply E_NonDet1.
+      apply E_NonDet1. apply E_Skip.
     + (* c = <{ X := a }> *)
       exists ((st1, <{X := a}>) :: q2).
-      apply E_NonDet1.
+      apply E_NonDet1. apply E_Asgn.
     + (* c = <{ c1; c2 }> *)
       exists ((st1, <{c1; c2}>) :: q1).
-      (* apply E_NonDet2. *)
+      apply E_NonDet2.
       admit.
 Admitted. (* TODO - Finish *)
 
@@ -476,15 +502,17 @@ Proof.
   intros st1 st2 q1 q2 result H.
   - inversion H; subst.
     + exists ((st1, c2) :: q1).
-      apply E_NonDet2.
+      apply E_NonDet2. 
+      apply H7.
     + exists ((st1, c1) :: q1).
       apply E_NonDet1.
+      apply H7.
   - inversion H; subst.
     + exists ((st1, c2) :: q1).
-      apply E_NonDet1.
+      apply E_NonDet1. admit.
     + exists ((st1, c1) :: q1).
-      apply E_NonDet2.
-Qed.
+      apply E_NonDet2. admit.
+Admitted.
 
 Lemma choice_assoc: forall c1 c2 c3,
 <{ (c1 !! c2) !! c3 }> == <{ c1 !! (c2 !! c3) }>.
@@ -494,19 +522,11 @@ Proof.
   unfold cequiv_imp;
   intros st1 st2 q1 q2 result H.
   - inversion H; subst. (* Right side *)
-    + (* Case 1: (c2 !! c3) is chosen *)
-      exists ((st1, c1) :: q1).
-      apply E_NonDet2.
-    + (* Case 2: c1 is chosen *)
-      exists ((st1, <{c2 !! c3}>) :: q1).
-      apply E_NonDet1.
-  - inversion H; subst. (* Left Side *)
-    +  (* Case 1: (c1 !! c2) is chosen *)
-      exists ((st1, c3) :: q1).
-      apply E_NonDet1.
-    +   (* Case 2: c3 is chosen *)
-      exists ((st1, <{c1 !! c2}>) :: q1).
-      apply E_NonDet2.
+    + (* Case 1: c1 is chosen *)
+      exists ((st1, <{ c2 !! c3}>) :: q1).
+      apply E_NonDet1. (* Apply the first choice *)
+      
+    + (* Case 2: c2 !! c3 is chosen *)
 Qed.
 
 
@@ -531,17 +551,18 @@ Proof.
   - inversion H; subst. (* Right side *)
     + (* Case 1: c1' is chosen *)
       exists ((st1, c2') :: q1).
-      apply E_NonDet1.
+      apply E_NonDet1. apply H1 in H9. destruct H9 as [q3 H9].
+      admit.
     + (* Case 2: c2' is chosen *)
       exists ((st1, c1') :: q1).
-      apply E_NonDet2.
+      apply E_NonDet2. admit.
   - inversion H; subst. (* Left Side *)
     + (* Case 1: c1 is chosen *)
       exists ((st1, c2) :: q1).
-      apply E_NonDet1.
+      apply E_NonDet1. admit.
     + (* Case 2: c2 is chosen *)
       exists ((st1, c1) :: q1).
-      apply E_NonDet2.
+      apply E_NonDet2. admit.
 Qed.
 
 Theorem skip_left : forall c,
