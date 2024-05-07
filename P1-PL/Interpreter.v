@@ -29,45 +29,51 @@ Notation "'LETOPT' x <== e1 'IN' e2"
              See the notation LETOPT in the ImpCEval chapter.
 *)
 
-Fixpoint ceval_step (st : state) (c : com) (continuation: list (state * com)) (i : nat)
-                    : interpreter_result :=
+Fixpoint ceval_step_inner (st : state) (c : com) (continuation: list (state * com)) (i : nat) (suffix: option com)
+                          : interpreter_result :=
   match i with
   | 0 => OutOfGas
   | S n => match c with
           | <{ skip }> => Success (st, continuation)
           | <{ x := a }> => Success ((x !-> (aeval st a) ; st), continuation) (* Update total_map st with binding *)
           | <{ c1 ; c2 }> =>
-              match ceval_step st c1 continuation n with (* TODO - use LETOPT notations *)
-              | Success (st', continuation') =>
-                let
-                  continuation' := map (fun p => (fst p, <{ snd p; c2 }>)) continuation' (* Make c2 execute after all continuations *)
-                in
-                  ceval_step st' c2 continuation' n
+              let suffix' := match suffix with
+                | Some c' => Some <{ c2; c' }>
+                | None => Some c2
+              end in match ceval_step_inner st c1 continuation n suffix' with (* TODO - use LETOPT notations *)
+              | Success (st', continuation') => ceval_step_inner st' c2 continuation' n suffix
               | Fail => Fail
               | OutOfGas => OutOfGas
               end
           | CIf b c1 c2 => (* TODO use the Imp language notation *)
               if (beval st b)
-                then ceval_step st c1 continuation n
-                else ceval_step st c2 continuation n
+                then ceval_step_inner st c1 continuation n suffix
+                else ceval_step_inner st c2 continuation n suffix
           | CWhile b c1 => (* TODO use the Imp language notation *)
               if (beval st b)
-                then match ceval_step st c1 continuation n with (* TODO use the Imp Notation *)
-                | Success (st', continuation') => ceval_step st' c continuation' n (* Repeat while with new state *)
+                then match ceval_step_inner st c1 continuation n suffix with (* TODO use the Imp Notation *)
+                | Success (st', continuation') => ceval_step_inner st' c continuation' n suffix (* Repeat while with new state *)
                 | Fail => Fail
                 | OutOfGas => OutOfGas
                 end
                 else Success (st, continuation)
-          | <{ c1 !! c2 }> =>  ceval_step st c1 ( (st, c2) :: continuation) n
-          | <{ b -> c1 }> => 
+          | <{ c1 !! c2 }> =>  ceval_step_inner st c1 ( (st, match suffix with
+            | Some c' => <{ (c2; c') }>
+            | None => c2
+            end) :: continuation) n suffix
+          | <{ b -> c1 }> =>
             if (beval st b)
-              then ceval_step st c1 continuation n
+              then ceval_step_inner st c1 continuation n suffix
               else match continuation with (* Backtrack non-deterministic choice *)
                 | [] => Fail (* No remaining non-deterministic choices to execute *)
-                | (st', c') :: continuation' => ceval_step st' c' continuation' n
+                | (st', c') :: continuation' => ceval_step_inner st' c' continuation' n suffix
               end
           end
   end.
+
+Definition ceval_step (st : state) (c : com) (continuation: list (state * com)) (i : nat)
+                    : interpreter_result :=
+  ceval_step_inner st c continuation i None.      
 
 (* Helper functions that help with running the interpreter *)
 Inductive show_result : Type :=
@@ -244,6 +250,11 @@ Theorem p1_equals_p2: forall st cont,
     (forall i1, i1 >= i0 -> ceval_step st p1 cont i1 = ceval_step st p2 cont i1)).
 Proof.
   intros st cont. exists 5. intros i1 H.
+  do 5 (destruct i1; try lia).
+  reflexivity.
+Qed.
+
+(*
   assert (H1: exists i2, i1 = S (S (S (S (S i2))))). {
     destruct i1.
     - lia.
@@ -260,8 +271,8 @@ Proof.
   destruct H1 as [i2 H1].
   rewrite H1.
   induction i2.
-  - simpl. 
-Admitted.
+  - simpl.
+Admitted.*)
 
 (**
   2.3. TODO: Prove ceval_step_more.
