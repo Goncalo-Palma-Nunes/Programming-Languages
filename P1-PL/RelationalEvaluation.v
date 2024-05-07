@@ -60,17 +60,17 @@ Inductive ceval : com -> state -> list (state * com) ->
               If Rules
 **************************************)
 
-| E_IfTrue : forall st st' q b c1 c2 r,
+| E_IfTrue : forall st st' q q' b c1 c2 r,
   (* if the condition is true, the result is the same as running the first command *)
   beval st b = true ->
-  st / q =[ c1 ]=> st' / q / r ->
-  st / q =[ if b then c1 else c2 end ]=> st' / q / r (* TODO - Could we need a q' ?*)
+  st / q =[ c1 ]=> st' / q' / r ->
+  st / q =[ if b then c1 else c2 end ]=> st' / q' / r
 
-| E_IfFalse : forall st st' q b c1 c2 r,
+| E_IfFalse : forall st st' q q' b c1 c2 r,
   (* if the condition is false, the result is the same as running the second command *)
   beval st b = false ->
-  st / q =[ c2 ]=> st' / q / r ->
-  st / q =[ if b then c1 else c2 end ]=> st' / q / r (* TODO - Could we need a q' ?*)
+  st / q =[ c2 ]=> st' / q' / r ->
+  st / q =[ if b then c1 else c2 end ]=> st' / q' / r
 
 (*************************************
               While Rules
