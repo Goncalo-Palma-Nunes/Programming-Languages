@@ -101,17 +101,17 @@ Inductive ceval : com -> state -> list (state * com) ->
                Rules
 **************************************)
 
-| E_NonDet1 : forall st st' q c1 c2 r,
+| E_NonDet1 : forall st st' q q'' c1 c2 r,
 (* Result is the same as the result of running the command picked
 non deterministically, with state st and continuation list q *)
-  st / q =[ c1 ]=> st' / q / r -> (* Should q = ((st, c2) :: q) *)
-  st / q =[ c1 !! c2 ]=> st' / ((st, c2) :: q) / r
+  st / q =[ c1 ]=> st' / q'' / r -> (* Should q = ((st, c2) :: q) *)
+  st / q =[ c1 !! c2 ]=> st' / ((st, c2) :: q'') / r
 
-| E_NonDet2 : forall st st' q c1 c2 r,
+| E_NonDet2 : forall st st' q q'' c1 c2 r,
 (* Result is the same as the result of running the command picked
 non deterministically, with state st and continuation list q *)
-  st / q =[ c2 ]=> st' / q / r ->
-  st / q =[ c1 !! c2 ]=> st' / ((st, c1) :: q) / r
+  st / q =[ c2 ]=> st' / q'' / r ->
+  st / q =[ c1 !! c2 ]=> st' / ((st, c1) :: q'') / r
 
 (*************************************
           Conditional Guard
@@ -526,12 +526,37 @@ Proof.
   apply conj;
   unfold cequiv_imp;
   intros st1 st2 q1 q2 result H.
-  - inversion H; subst. (* Right side *)
+  - inversion H; subst. inversion H7; subst. (* Right side *)
     + (* Case 1: c1 is chosen *)
-      exists ((st1, <{ c2 !! c3}>) :: q1).
+      (* exists ((st1, <{ c2 !! c3}>) :: q1). *)
+      eexists.
       apply E_NonDet1. (* Apply the first choice *)
-      
+      apply H8.
     + (* Case 2: c2 !! c3 is chosen *)
+      eexists.
+      apply E_NonDet2. (* Apply the second choice *)
+      apply E_NonDet1.
+      apply H8.
+    + (* Case 3: c3 is chosen *)
+      eexists.
+      apply E_NonDet2. (* Apply the second choice *)
+      apply E_NonDet2.
+      apply H7.
+  - inversion H; subst.
+    + eexists.
+      apply E_NonDet1.
+      apply E_NonDet1.
+      apply H7.
+    + inversion H7. subst.
+      -- 
+        eexists. 
+        apply E_NonDet1.
+        apply E_NonDet2.
+        apply H8.
+      -- 
+        eexists.
+        apply E_NonDet2.
+        apply H8.
 Qed.
 
 
@@ -543,6 +568,7 @@ Proof.
   unfold cequiv_imp;
   intros st1 st2 q1 q2 result H.
   - inversion H; subst. (* Right side *)
+    + 
 Admitted. (* TODO - Finish *)
 
 Lemma choice_congruence: forall c1 c1' c2 c2',
