@@ -430,8 +430,6 @@ Infix "==" := cequiv (at level 99).
 
 Property asgn_always_succeeds: forall (st : state) cont
   (n : nat) (x : string) result (st' : state),
-  (* st / cont =[ x := n ]=> (x !-> n ; st) / cont / result ->
-  st / cont =[ x := n ]=> (x !-> n ; st) / cont / Success. *)
   st' = (x !-> n ; st) ->
   st / cont =[ x := n ]=> st' / cont / result ->
   st / cont =[ x := n ]=> st' / cont / Success.
@@ -439,9 +437,6 @@ Proof.
   intros st cont n x result st' H H0.
   inversion H0; subst.
   apply H0.
-  (* intros st cont n x i result H.
-  inversion H; subst.
-  apply H. *)
 Qed.
 
 Lemma cequiv_ex1:
@@ -451,16 +446,8 @@ Proof.
   apply conj; (* Prove each side of the /\ in cequiv *)
   unfold cequiv_imp;
   intros st1 st2 q1 q2 result H.
-  - inversion H; subst.
-    + exists q1. 
-     (*apply asgn_always_succeeds with .*)
-    admit.
-    + exists q2. apply H7.
+  - inversion H; subst. admit.
   - admit.
-  (* - exists q1. *)
-    (* apply E_Seq with (X !-> 2; st1) q1. *)
-      (* + apply E_Asgn. *)
-      (* + apply E_GuardTrue. reflexivity. *)
 Admitted. (* TODO - Finish *)
 
 Lemma cequiv_ex2:
@@ -478,23 +465,9 @@ Proof.
   apply conj;
   unfold cequiv_imp;
   intros st1 st2 q1 q2 result H.
-  - inversion H; 
-    subst; 
-    exists q1; 
-    apply H7.
-  - inversion H; subst.
-    (* c = c, so we always apply the first case of the non-deterministic choice*)
-    + (* c = <{ skip }> *)
-      exists ((st2, <{skip}>) :: q2).
-      apply E_NonDet1. apply E_Skip.
-    + (* c = <{ X := a }> *)
-      exists ((st1, <{X := a}>) :: q2).
-      apply E_NonDet1. apply E_Asgn.
-    + (* c = <{ c1; c2 }> *)
-      exists ((st1, <{c1; c2}>) :: q1).
-      apply E_NonDet2.
-      admit.
-Admitted. (* TODO - Finish *)
+  - inversion H; subst; eexists; apply H7.
+  - eexists. apply E_NonDet1. apply H. 
+Qed.
 
 Lemma choice_comm: forall c1 c2,
 <{ c1 !! c2 }> == <{ c2 !! c1 }>.
@@ -528,7 +501,6 @@ Proof.
   intros st1 st2 q1 q2 result H.
   - inversion H; subst. inversion H7; subst. (* Right side *)
     + (* Case 1: c1 is chosen *)
-      (* exists ((st1, <{ c2 !! c3}>) :: q1). *)
       eexists.
       apply E_NonDet1. (* Apply the first choice *)
       apply H8.
@@ -547,14 +519,12 @@ Proof.
       apply E_NonDet1.
       apply E_NonDet1.
       apply H7.
-    + inversion H7. subst.
+    + inversion H7; subst; eexists.
       -- 
-        eexists. 
         apply E_NonDet1.
         apply E_NonDet2.
         apply H8.
       -- 
-        eexists.
         apply E_NonDet2.
         apply H8.
 Qed.
