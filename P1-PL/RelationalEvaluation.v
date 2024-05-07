@@ -500,13 +500,11 @@ Proof.
   apply conj;
   unfold cequiv_imp;
   intros st1 st2 q1 q2 result H.
-  - inversion H; subst. inversion H7; subst. (* Right side *)
+  - inversion H; subst. inversion H7; subst; eexists. (* Right side *)
     + (* Case 1: c1 is chosen *)
-      eexists.
       apply E_NonDet1. (* Apply the first choice *)
       apply H8.
     + (* Case 2: c2 !! c3 is chosen *)
-      eexists.
       apply E_NonDet2. (* Apply the second choice *)
       apply E_NonDet1.
       apply H8.
@@ -537,9 +535,36 @@ Proof.
   intros c1 c2 c3.
   apply conj;
   unfold cequiv_imp;
-  intros st1 st2 q1 q2 result H.
-  - inversion H; subst. (* Right side *)
-    + 
+  intros st1 st2 q1 q2 result H; inversion H; subst; eexists.
+  - 
+    apply E_NonDet2.
+    apply E_Seq with st3 q3.
+    -- apply H2.
+    -- admit. (* There is probably something wrong here
+                In both cases hwere we do apply 'E_Seq with stY qX'.
+                we can't finish the second subgoal *)
+  - 
+    apply E_NonDet2.
+    apply E_SeqFT.
+    apply H7.
+  - 
+    inversion H7; subst.
+    -- 
+      apply E_Seq with st3 q2.
+      --- apply H2.
+      --- admit.
+    -- 
+      apply E_SeqFT.
+      apply H8.
+  - 
+    inversion H7; subst.
+    -- 
+      apply E_Seq with st3 q2.
+      --- apply H2.
+      --- admit.
+    -- 
+      apply E_SeqFT.
+      apply H8.
 Admitted. (* TODO - Finish *)
 
 Lemma choice_congruence: forall c1 c1' c2 c2',
