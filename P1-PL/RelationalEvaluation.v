@@ -130,7 +130,6 @@ non deterministically, with state st and continuation list q *)
 
 | E_GuardFalse_Cont : forall st st' st'' st''' q q' q'' q''' b c c' r,
   beval st b = false -> (* if the guard condition is false *)
-  q <> [] -> (* There are remaining non-deterministic choices to execute *)
   q = (st'', c') :: q'' -> (* Get the next state and command *)
   st / q'' =[ c' ]=> st''' / q''' / r -> (* Backtrack *)
   (* q''', because c' could itself be another non deterministic choice command *)
@@ -302,7 +301,6 @@ Proof.
   - (* Guard command *)
     apply E_GuardFalse_Cont with empty_st (X !-> 2; X !-> 1) [] [] <{X := 2}>.
       + reflexivity. (* Guard is false *)
-      + discriminate. (* There are more non-deterministic choices *)
       + reflexivity. (* State to backtrack to *)
       + apply E_Asgn. (* Execute with new context *)
 Qed.
