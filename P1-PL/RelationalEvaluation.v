@@ -118,9 +118,10 @@ non deterministically, with state st and continuation list q *)
                Rules
 **************************************)
 
-| E_GuardTrue : forall st st' q b c r,
+| E_GuardTrue : forall st st' q q' b c r,
   beval st b = true -> (* if the guard condition is true *)
-  st / q =[ (b -> c) ]=> st' / q / r
+  st / q =[ c ]=> st' / q' / r ->
+  st / q =[ (b -> c) ]=> st' / q' / r
 
 | E_GuardFalse_NoCont : forall st st' q b c,
   beval st b = false -> (* if the guard condition is false *)
@@ -255,7 +256,11 @@ Proof.
   - (* Assignment command *)
     apply E_Asgn.
   - (* Guard command *)
-    apply E_GuardTrue. reflexivity.
+    apply E_GuardTrue.
+    + (* Guard condition *)
+      reflexivity.
+    + (* Assignment command *)
+      apply E_Asgn.
 Qed. 
 
 (* Pick second command in non-deterministic constructor *)
@@ -273,7 +278,11 @@ Proof.
     apply E_NonDet2. 
     apply E_Asgn. (* result depends on result of the command picked *)
   - (* Guard command *)
-    apply E_GuardTrue. reflexivity.
+    apply E_GuardTrue.
+    + (* Guard condition *)
+      reflexivity.
+    + (* Guard assignment *)
+      apply E_Asgn.
 Qed.
 
 (* Pick first command in non-deterministic constructor *)  
@@ -371,7 +380,10 @@ Proof.
     apply E_WhileTrueSucceed with (X !-> 2; X !-> 1; empty_st) [].
     + reflexivity. (* Condition is true *)
     + apply E_GuardTrue. (* Guard is true *)
-      reflexivity.
+      * (* Guard condition *)
+        reflexivity.
+      * (* Assignment command *)
+        apply E_Asgn.
     + apply E_WhileTrueFail. (* Guard is true, but command fails *)
       -- reflexivity. (* Condition is true *)
       -- apply E_GuardFalse_NoCont.
