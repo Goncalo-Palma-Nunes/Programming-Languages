@@ -501,14 +501,14 @@ Proof.
   unfold cequiv_imp;
   intros st1 st2 q1 q2 result H.
   - inversion H; subst. inversion H7; subst; eexists. (* Right side *)
-    + (* Case 1: c1 is chosen *)
+    +
       apply E_NonDet1. (* Apply the first choice *)
       apply H8.
-    + (* Case 2: c2 !! c3 is chosen *)
+    +
       apply E_NonDet2. (* Apply the second choice *)
       apply E_NonDet1.
       apply H8.
-    + (* Case 3: c3 is chosen *)
+    +
       eexists.
       apply E_NonDet2. (* Apply the second choice *)
       apply E_NonDet2.
@@ -574,23 +574,24 @@ Proof.
   intros c1 c1' c2 c2' H1 H2.
   apply conj;
   unfold cequiv_imp;
-  intros st1 st2 q1 q2 result H.
-  - inversion H; subst. (* Right side *)
-    + (* Case 1: c1' is chosen *)
-      exists ((st1, c2') :: q1).
-      apply E_NonDet1. apply H1 in H9. destruct H9 as [q3 H9].
-      admit.
-    + (* Case 2: c2' is chosen *)
-      exists ((st1, c1') :: q1).
-      apply E_NonDet2. admit.
-  - inversion H; subst. (* Left Side *)
-    + (* Case 1: c1 is chosen *)
-      exists ((st1, c2) :: q1).
-      apply E_NonDet1. admit.
-    + (* Case 2: c2 is chosen *)
-      exists ((st1, c1) :: q1).
-      apply E_NonDet2. admit.
-Qed.
+  intros st1 st2 q1 q2 result H; inversion H; subst; eexists.
+  + apply E_NonDet1.
+    replace c1' with c1.
+    -- apply H9.
+    -- admit. 
+  + apply E_NonDet2.
+    replace c2' with c2.
+    -- apply H9.
+    -- admit.
+  + apply E_NonDet1.
+    replace c1 with c1'.
+    -- apply H9.
+    -- admit.
+  + apply E_NonDet2.
+    replace c2 with c2'.
+    -- apply H9.
+    -- admit.
+Admitted.
 
 Theorem skip_left : forall c,
   <{ skip ; c }> == c.
