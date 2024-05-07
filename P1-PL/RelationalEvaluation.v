@@ -477,18 +477,19 @@ Proof.
   apply conj;
   unfold cequiv_imp;
   intros st1 st2 q1 q2 result H.
-  - inversion H; subst.
-    + exists ((st1, c2) :: q1).
-      apply E_NonDet2. 
+  - inversion H; subst; eexists. (* Right side *)
+    + (* Case 1: c1 is chosen *)
+      apply E_NonDet2. (* Apply the second choice *)
       apply H7.
-    + exists ((st1, c1) :: q1).
-      apply E_NonDet1.
+    + (* Case 2: c2 is chosen *)
+      apply E_NonDet1. (* Apply the first choice *)
       apply H7.
-  - exists q2.
-    inversion H; subst.
-    + apply E_NonDet2.
+  - inversion H; subst; eexists. (* Left side *)
+    + (* Case 1: c2 is chosen *)
+      apply E_NonDet2. (* Apply the second choice *)
       apply H7.
-    + apply E_NonDet1.
+    + (* Case 2: c1 is chosen *)
+      apply E_NonDet1. (* Apply the first choice *)
       apply H7.
 Qed.
 
