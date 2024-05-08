@@ -172,6 +172,15 @@ Proof.
       apply E_Asgn.
 Qed.
 
+Example ceval_example_seq_asgn':
+empty_st / [] =[
+X := 2;
+Y := 3;
+Z := 4
+]=> (Z !-> 4 ; Y !-> 3 ; X !-> 2) / [] / Success.
+Proof.
+  repeat econstructor.
+Qed.
 
 Example ceval_example_if:
 empty_st / [] =[
@@ -211,6 +220,18 @@ Proof.
       reflexivity.
     -- (* Then command *)
       apply E_Asgn.
+Qed.
+
+Example ceval_example_if2':
+empty_st / [] =[
+X := 2;
+if (X = 2)
+  then Y := 3
+  else Z := 4
+end
+]=> (Y !-> 3 ; X !-> 2) / [] / Success.
+Proof.
+  repeat econstructor.
 Qed.
 
 Example ceval_example_guard0:
@@ -260,6 +281,15 @@ Proof.
       reflexivity.
     + (* Assignment command *)
       apply E_Asgn.
+Qed.
+
+Example ceval_example_guard2':
+empty_st / [] =[
+   X := 2;
+   (X = 2) -> X:=3
+]=> (X !-> 3 ; X !-> 2) / [] / Success.
+Proof.
+  repeat econstructor.
 Qed. 
 
 (* Pick second command in non-deterministic constructor *)
