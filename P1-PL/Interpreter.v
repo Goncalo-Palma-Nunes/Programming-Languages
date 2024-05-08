@@ -277,6 +277,29 @@ Admitted.*)
 (**
   2.3. TODO: Prove ceval_step_more.
 *)
+
+Lemma ceval_step_next: forall i1 st st' c cont cont',
+  ceval_step st c cont i1 = Success (st', cont') ->
+  ceval_step st c cont (S i1) = Success (st', cont').
+Proof.
+  intros.
+  destruct c; rewrite <- H; destruct i1; try discriminate.
+    (* skip *)
+  - reflexivity.
+    (* := *)
+  - reflexivity.
+    (* ; *)
+  - admit.
+    (* if *)
+  - admit.
+    (* while *)
+  - admit.
+    (* !! *)
+  - admit.
+    (* -> *)
+  - admit.
+Admitted.
+
 (* For any two executions of the same program c, starting in the same state st
 and with the same list of continuations cont, with different amounts of gas
 i1 <= i2, if the execution with i1 succeeds, then the execution with i2
@@ -286,18 +309,10 @@ Theorem ceval_step_more: forall i1 i2 st st' c cont cont',
   ceval_step st c cont i1 = Success (st', cont') ->
   ceval_step st c cont i2 = Success (st', cont').
 Proof.
-  induction i1 as [|i1' IH];
-  intros i2 st st' c cont cont' Hle Hceval.
-  - simpl in Hceval. discriminate Hceval.
-  - destruct i2 as [|i2']. inversion Hle.
-  assert (Hle': i1' <= i2') by lia.
-  destruct c.
-  + (* skip *)
-    simpl in Hceval. inversion Hceval. reflexivity.
-  + (* x := a *)
-    simpl in Hceval. inversion Hceval. reflexivity.
-  + (* c1 ; c2 *)
-    simpl in Hceval. simpl.
-    destruct (ceval_step st c1 cont i1') eqn:Heq1.
-    (* TODO *)
-Admitted.
+  intros i1 i2 st st' c cont cont' Hle Hceval.
+  induction i2 as [| i2' IHi2].
+  - inversion Hle. rewrite H in Hceval. assumption.
+  - inversion Hle.
+    + rewrite <- H. apply Hceval.
+    + specialize (IHi2 H0). apply ceval_step_next. assumption.
+Qed.
