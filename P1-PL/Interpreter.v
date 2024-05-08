@@ -13,15 +13,13 @@ Inductive interpreter_result : Type :=
 (** We can improve the readability of this version by introducing a
     bit of auxiliary notation to hide the plumbing involved in
     repeatedly matching against optional states. *)
-
-(*
-Notation "'LETOPT' x <== e1 'IN' e2"
+Notation "'LETOPT' st cont <== e1 'IN' e2"
   := (match e1 with
-          | Some x => e2
-          | None => None
+          | Success (st, cont) => e2
+          | Fail => Fail
+          | OutOfGas => OutOfGas
        end)
-(right associativity, at level 60).
-*)
+  (right associativity, at level 60, st ident, cont ident).
 
 (**
   2.1. TODO: Implement ceval_step as specified. To improve readability,
@@ -29,7 +27,7 @@ Notation "'LETOPT' x <== e1 'IN' e2"
              See the notation LETOPT in the ImpCEval chapter.
 *)
 
-Fixpoint ceval_step_inner (st : state) (c : com) (continuation: list (state * com)) (i : nat) (suffix: option com)
+(*Fixpoint ceval_step_inner (st : state) (c : com) (continuation: list (state * com)) (i : nat) (suffix: option com)
                           : interpreter_result :=
   match i with
   | 0 => OutOfGas
@@ -40,7 +38,7 @@ Fixpoint ceval_step_inner (st : state) (c : com) (continuation: list (state * co
               let suffix' := match suffix with
                 | Some c' => Some <{ c2; c' }>
                 | None => Some c2
-              end in match ceval_step_inner st c1 continuation n suffix' with (* TODO - use LETOPT notations *)
+              end in match ceval_tep_inner st c1 continuation n suffix' with (* TODO - use LETOPT notations *)
               | Success (st', continuation') => ceval_step_inner st' c2 continuation' n suffix
               | Fail => Fail
               | OutOfGas => OutOfGas
@@ -74,6 +72,38 @@ Fixpoint ceval_step_inner (st : state) (c : com) (continuation: list (state * co
 Definition ceval_step (st : state) (c : com) (continuation: list (state * com)) (i : nat)
                     : interpreter_result :=
   ceval_step_inner st c continuation i None.      
+*)
+
+Fixpoint ceval_step (st : state) (c : com) (continuation: list (state * com)) (i : nat)
+                    : interpreter_result :=
+  match i with
+  | 0 => OutOfGas
+  | S n => match c with
+          | <{ skip }> => Success (st, continuation)
+          | <{ x := a }> => Success ((x !-> (aeval st a) ; st), continuation) (* Update total_map st with binding *)
+          | <{ c1 ; c2 }> =>
+            LETOPT st' continuation' <== ceval_step st c1 continuation n
+            IN ceval_step st' c2 continuation' n
+          | <{ if b then c1 else c2 end }> =>
+            if beval st b
+            then ceval_step st c1 continuation n
+            else ceval_step st c2 continuation n
+          | <{ while b do c1 end }> => (* TODO use the Imp language notation *)
+            if beval st b
+            then
+              LETOPT st' continuation' <== ceval_step st c1 continuation n
+              IN ceval_step st' c continuation' n (* Repeat while with new state *)
+            else Success (st, continuation)
+          | <{ c1 !! c2 }> => ceval_step st c1 ( (st, c2) :: continuation) n
+          | <{ b -> c1 }> =>
+            if (beval st b)
+              then ceval_step st c1 continuation n
+              else match continuation with (* Backtrack non-deterministic choice *)
+                | [] => Fail (* No remaining non-deterministic choices to execute *)
+                | (st', c') :: continuation' => ceval_step st' <{ c'; c }> continuation' n
+              end
+          end
+  end.
 
 (* Helper functions that help with running the interpreter *)
 Inductive show_result : Type :=
@@ -277,29 +307,6 @@ Admitted.*)
 (**
   2.3. TODO: Prove ceval_step_more.
 *)
-
-Lemma ceval_step_next: forall i1 st st' c cont cont',
-  ceval_step st c cont i1 = Success (st', cont') ->
-  ceval_step st c cont (S i1) = Success (st', cont').
-Proof.
-  intros.
-  destruct c; rewrite <- H; destruct i1; try discriminate.
-    (* skip *)
-  - reflexivity.
-    (* := *)
-  - reflexivity.
-    (* ; *)
-  - admit.
-    (* if *)
-  - admit.
-    (* while *)
-  - admit.
-    (* !! *)
-  - admit.
-    (* -> *)
-  - admit.
-Admitted.
-
 (* For any two executions of the same program c, starting in the same state st
 and with the same list of continuations cont, with different amounts of gas
 i1 <= i2, if the execution with i1 succeeds, then the execution with i2
@@ -309,10 +316,49 @@ Theorem ceval_step_more: forall i1 i2 st st' c cont cont',
   ceval_step st c cont i1 = Success (st', cont') ->
   ceval_step st c cont i2 = Success (st', cont').
 Proof.
-  intros i1 i2 st st' c cont cont' Hle Hceval.
-  induction i2 as [| i2' IHi2].
-  - inversion Hle. rewrite H in Hceval. assumption.
-  - inversion Hle.
-    + rewrite <- H. apply Hceval.
-    + specialize (IHi2 H0). apply ceval_step_next. assumption.
+  induction i1 as [|i1' IHi1']; intros i2 st st' c cont cont' Hle Hceval.
+    - (* i1 = 0 *)
+      simpl in Hceval.
+      discriminate Hceval.
+    - (* i1 = S i1 *)
+      destruct i2 as [|i2']. inversion Hle.
+      assert (Hle': i1' <= i2') by lia.
+      destruct c.
+      + (* skip *)
+        simpl in Hceval. inversion Hceval. reflexivity.
+      + (* := *)
+        simpl in Hceval. inversion Hceval. reflexivity.
+      + (* ; *)
+        simpl in Hceval. simpl.
+        destruct (ceval_step st c1 cont i1') eqn:Heqst1'o.
+        * (* st1'o = Success *)
+          destruct s. apply (IHi1' i2') in Heqst1'o; try assumption.
+          rewrite Heqst1'o. apply (IHi1' i2') in Hceval; assumption.
+        * (* st1'o = Fail *)
+          discriminate Hceval.
+        * (* st1'o = OutOfGas *)
+          discriminate Hceval.
+      + (* if *)
+        simpl in Hceval. simpl.
+        destruct (beval st b); apply (IHi1' i2') in Hceval; assumption.
+      + (* while *)
+        simpl in Hceval. simpl.
+        destruct (beval st b); try assumption.
+        destruct (ceval_step st c cont i1') eqn:Heqst1'o.
+        * (* st1'o = Success *)
+          destruct s. apply (IHi1' i2') in Heqst1'o; try assumption.
+          rewrite Heqst1'o. apply (IHi1' i2') in Hceval; assumption.
+        * (* st1'o = Fail *)
+          discriminate Hceval.
+        * (* st1'o = Fail *)
+          discriminate Hceval.
+      + (* !! *)
+        apply (IHi1' i2') in Hceval; assumption.
+      + (* -> *)
+        simpl in Hceval. simpl.
+        destruct (beval st b).
+        * apply (IHi1' i2') in Hceval; assumption.
+        * destruct cont; try discriminate.
+          destruct p.
+          apply (IHi1' i2') in Hceval; assumption.
 Qed.
