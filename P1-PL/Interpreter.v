@@ -75,6 +75,51 @@ Fixpoint ceval_step_opt (st : state) (c : com) (continuation: list (state * com)
           end
   end.
 
+Fixpoint ceval_step_suf (st : state) (c : com) (continuation: list (state * com)) (i : nat) (suf : option com)
+                      : interpreter_result :=
+  match i with
+  | 0 => OutOfGas
+  | S n => match c with
+          | <{ skip }> => Success (st, continuation)
+          | <{ x := a }> => Success ((x !-> (aeval st a) ; st), continuation) (* Update total_map st with binding *)
+          | <{ c1 ; c2 }> =>
+            LETOPT st' continuation' <== ceval_step_suf st c1 continuation n
+              (match suf with
+              | Some suf => Some <{ c2; suf }>
+              | None => Some c2
+              end)
+            IN ceval_step_suf st' c2 continuation' n suf
+          | <{ if b then c1 else c2 end }> =>
+            if beval st b
+            then ceval_step_suf st c1 continuation n suf
+            else ceval_step_suf st c2 continuation n suf
+          | <{ while b do c1 end }> =>
+            if beval st b
+            then
+              LETOPT st' continuation' <== ceval_step_suf st c1 continuation n suf
+              IN ceval_step_suf st' c continuation' n suf (* Repeat while with new state *)
+            else Success (st, continuation)
+          | <{ c1 !! c2 }> =>
+              let c2' := match suf with
+                         | Some suf => <{ c2; suf }>
+                         | None => c2
+                         end
+              in ceval_step_suf st c1 ( (st, c2') :: continuation) n suf
+          | <{ b -> c1 }> =>
+            if (beval st b)
+              then ceval_step_suf st c1 continuation n suf
+              else match continuation with (* Backtrack non-deterministic choice *)
+                | [] => Fail (* No remaining non-deterministic choices to execute *)
+                | (st', c') :: continuation' => ceval_step_suf st' c' continuation' n suf
+              end
+          end
+  end.
+
+Definition ceval_step (st : state) (c : com) (continuation: list (state * com)) (i : nat)
+                    : interpreter_result :=
+  ceval_step_suf st c continuation i None.
+
+(*
 Fixpoint ceval_step (st : state) (c : com) (continuation: list (state * com)) (i : nat)
                     : interpreter_result :=
   match i with
@@ -105,6 +150,7 @@ Fixpoint ceval_step (st : state) (c : com) (continuation: list (state * com)) (i
               end
           end
   end.
+*)
 
 (* Helper functions that help with running the interpreter *)
 Inductive show_result : Type :=
@@ -172,7 +218,15 @@ Example test_11:
   = OK [("X", 0); ("Y", 5); ("Z", 0)].
 Proof. auto. Qed.
 
-
+Example test_12:
+  run_interpreter (X !-> 0) 
+  <{(X := 0 !! X := 1);
+     X := X + 1;
+     X = 2 -> skip
+  }>
+  8 
+  = OK [("X", 2); ("Y", 0); ("Z", 0)].
+Proof. auto. Qed.
 
 (**
   2.2. TODO: Prove p1_equals_p2. Recall that p1 and p2 are defined in Imp.v
@@ -229,19 +283,12 @@ Proof.
   reflexivity.
 Qed.
 
-(**
-  2.3. TODO: Prove ceval_step_more.
-*)
-(* For any two executions of the same program c, starting in the same state st
-and with the same list of continuations cont, with different amounts of gas
-i1 <= i2, if the execution with i1 succeeds, then the execution with i2
-will also succeed, with the same end state and list of continuations *)
-Theorem ceval_step_more: forall i1 i2 st st' c cont cont',
+Theorem ceval_step_suf_more: forall i1 i2 st st' c suf cont cont',
   i1 <= i2 ->
-  ceval_step st c cont i1 = Success (st', cont') ->
-  ceval_step st c cont i2 = Success (st', cont').
+  ceval_step_suf st c cont i1 suf = Success (st', cont') ->
+  ceval_step_suf st c cont i2 suf = Success (st', cont').
 Proof.
-  induction i1 as [|i1' IHi1']; intros i2 st st' c cont cont' Hle Hceval.
+  induction i1 as [|i1' IHi1']; intros i2 st st' c suf cont cont' Hle Hceval.
     - (* i1 = 0 *)
       simpl in Hceval.
       discriminate Hceval.
@@ -255,9 +302,10 @@ Proof.
         simpl in Hceval. inversion Hceval. reflexivity.
       + (* ; *)
         simpl in Hceval. simpl.
-        destruct (ceval_step st c1 cont i1') eqn:Heqst1'o.
+        destruct (ceval_step_suf st c1 cont i1') eqn:Heqst1'o.
         * (* st1'o = Success *)
-          destruct s. apply (IHi1' i2') in Heqst1'o; try assumption.
+          destruct s.
+          apply (IHi1' i2') in Heqst1'o; try assumption.
           rewrite Heqst1'o. apply (IHi1' i2') in Hceval; assumption.
         * (* st1'o = Fail *)
           discriminate Hceval.
@@ -269,7 +317,7 @@ Proof.
       + (* while *)
         simpl in Hceval. simpl.
         destruct (beval st b); try assumption.
-        destruct (ceval_step st c cont i1') eqn:Heqst1'o.
+        destruct (ceval_step_suf st c cont i1') eqn:Heqst1'o.
         * (* st1'o = Success *)
           destruct s. apply (IHi1' i2') in Heqst1'o; try assumption.
           rewrite Heqst1'o. apply (IHi1' i2') in Hceval; assumption.
@@ -288,6 +336,22 @@ Proof.
           apply (IHi1' i2') in Hceval; assumption.
 Qed.
 
+(**
+  2.3. TODO: Prove ceval_step_more.
+*)
+(* For any two executions of the same program c, starting in the same state st
+and with the same list of continuations cont, with different amounts of gas
+i1 <= i2, if the execution with i1 succeeds, then the execution with i2
+will also succeed, with the same end state and list of continuations *)
+Theorem ceval_step_more: forall i1 i2 st st' c cont cont',
+  i1 <= i2 ->
+  ceval_step st c cont i1 = Success (st', cont') ->
+  ceval_step st c cont i2 = Success (st', cont').
+Proof.
+  unfold ceval_step.
+  intros i1 i2 st st' c cont cont' Hle Hceval.
+  apply ceval_step_suf_more with (i1:=i1) (i2:=i2) (st:=st) (st':=st') (c:=c) (suf:=None) (cont:=cont) (cont':=cont'); assumption.
+Qed.
 
 (* Theorem ceval_opt_equals_ceval: forall st c cont n,
   ceval_step st c cont n = ceval_step_opt st c cont n.
