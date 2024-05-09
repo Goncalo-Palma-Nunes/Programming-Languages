@@ -386,6 +386,10 @@ Fixpoint parseSimpleCommand (steps:nat)
         ' (e, rest') <- firstExpect ":=" (parseAExp steps') rest ;;
         SomeE (<{i := e}>, rest')
     OR
+    TRY ' (i, rest) <- (parseBExp steps') xs;;
+        ' (r, rest') <- firstExpect "->" (parseSimpleCommand steps') rest ;;
+        SomeE (<{i -> r}>, rest')
+    OR
         NoneE "Expecting a command"
 end
 
@@ -399,6 +403,11 @@ with parseSequencedCommand (steps:nat)
             firstExpect ";"
                         (parseSequencedCommand steps') rest ;;
         SomeE (<{c ; c'}>, rest')
+    OR
+    TRY ' (c', rest') <-
+            firstExpect "!!"
+                        (parseSimpleCommand steps') rest ;;
+        SomeE (<{c !! c'}>, rest')
     OR
     SomeE (c, rest)
   end.
@@ -461,5 +470,24 @@ Example eg2 : parse "
       end;
       "x" := "z" }>.
 Proof. cbv. reflexivity. Qed.
+
+Compute tokenize "(x=1->y:=2) ".
+
+Example eg3 : parse "
+  x:=1 !! x:=2"
+=
+  SomeE <{
+      ("x":=1 !! "x":=2)}>.
+Proof. cbv. reflexivity. Qed.
+
+
+Example eg4 : parse "
+  y=2->x:=2
+  "
+=
+  SomeE <{
+      ("y"=2-> "x":=2)}>.
+Proof. cbv. reflexivity. Qed.
+
 
 (* 2023-12-29 17:12 *)
