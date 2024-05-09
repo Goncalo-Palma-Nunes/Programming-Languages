@@ -47,7 +47,10 @@ Fixpoint ceval_step_opt (st : state) (c : com) (continuation: list (state * com)
             if beval_opt st b (* Use optimized beval *)
             then ceval_step_opt st c1 continuation n
             else ceval_step_opt st c2 continuation n
-          (* | <{ while b do <{ skip }> end }> => OutOfGas *)
+          (* | <{ while b do <{ skip }> end }> => 
+            if beval_opt st b (* Use optimized beval *)
+            then OutOfGas (* Infinite loop *)
+            else Success (st, continuation) *)
           | <{ while b do c1 end }> =>
             if beval_opt st b (* Use optimized beval *)
             then
