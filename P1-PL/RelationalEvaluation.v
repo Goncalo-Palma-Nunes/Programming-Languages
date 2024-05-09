@@ -132,8 +132,8 @@ non deterministically, with state st and continuation list q *)
   beval st b = false -> (* if the guard condition is false *)
   q = (st'', c') :: q'' -> (* Get the next state and command *)
   st / q'' =[ c' ]=> st''' / q''' / r -> (* Backtrack *)
-  (* q''', because c' could itself be another non deterministic choice command *)
-  st / q =[ (b -> c) ]=> st' / q' / r (* Success depends result on result of backtracking*)
+  st''' / q''' =[ (b -> c) ]=> st' / q' / r -> (* Retry with new state *)
+  st / q =[ (b -> c) ]=> st' / q' / r (* Success depends on result of backtracking*)
 (*
   We ought to:
     - start at state st / q
@@ -321,9 +321,9 @@ empty_st / [] =[
    (X = 2) -> X:=3
 ]=> (X !-> 3) / q / Success.
 Proof.
-  exists [(empty_st, CAsgn X 2)]. (* Final continuation list *)
-  replace (X !-> 3) with (X !-> 3; X !-> 1);
-  try apply t_update_shadow. (* Update map with final state *)
+  exists []. (* Final continuation list *)
+  replace (X !-> 3) with (X !-> 3; X !-> 2) by apply t_update_shadow. (* Update map with final state *)
+  replace (X !-> 2) with (X !-> 2; X !-> 1) by apply t_update_shadow.
   apply E_Seq with (X !-> 1; empty_st) [(empty_st, CAsgn X 2)].
   - (* Non-deterministic choice *)
     apply E_NonDet1.
@@ -333,6 +333,9 @@ Proof.
       + reflexivity. (* Guard is false *)
       + reflexivity. (* State to backtrack to *)
       + apply E_Asgn. (* Execute with new context *)
+      + apply E_GuardTrue.
+        * reflexivity.
+        * apply E_Asgn.
 Qed.
 
 Example ceval_example_seq_fail: exists q,
