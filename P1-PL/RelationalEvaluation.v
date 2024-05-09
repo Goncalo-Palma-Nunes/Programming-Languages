@@ -30,6 +30,10 @@ Reserved Notation "st1 '/' q1 '=[' c ']=>' st2 '/' q2 '/' r"
 3. TODO: Define the relational semantics (ceval) to support the required constructs.
 *)
 
+(* True if qout has a prefix of qin, and all other elements are sequences ending in c2 *)
+Definition is_sequence_continuation (qin qout : list (state * com)) (c2: com) : Prop :=
+exists n q, qout = firstn n qin ++ q /\ Forall (fun x => exists c1, snd x = <{ c1; c2 }>) q.
+
 Inductive ceval : com -> state -> list (state * com) -> 
           result -> state -> list (state * com) -> Prop :=
 | E_Skip : forall st q,
@@ -44,12 +48,13 @@ Inductive ceval : com -> state -> list (state * com) ->
         Sequence Rules
 **************************************)
 
-| E_Seq : forall st1 q1 c1 st2 q2 c2 st3 q3 r,
+| E_Seq : forall st1 q1 c1 st2 q2 c2 q3 st3 q4 r,
   (* if first command succeeds, the end result is the same as the result
    or running the second command after the first *)
+   is_sequence_continuation q2 q3 c2 ->
   st1 / q1 =[ c1 ]=> st2 / q2 / Success ->
-  st2 / q2 =[ c2 ]=> st3 / q3 / r ->
-  st1 / q1 =[ c1 ; c2 ]=> st3 / q3 / r
+  st2 / q3 =[ c2 ]=> st3 / q4 / r ->
+  st1 / q1 =[ c1 ; c2 ]=> st3 / q4 / r
 
 | E_SeqFT : forall st1 q1 c1 st2 q2 c2,
   (* if first command fails, the sequence fails *)
@@ -623,12 +628,18 @@ Proof.
   unfold cequiv_imp;
   intros st1 st2 q1 q2 result H; inversion H; subst.
   - 
-    inversion H8; subst.
+    inversion H9; subst.
     + eexists.
       apply E_NonDet1.
-      apply E_Seq with st3 q3.
+      apply E_Seq with st3 q3 q4.
+      * unfold is_sequence_continuation.
+        exists 0. exists q4. split.
+        -- reflexivity.
+        -- 
+
+        admit.
       * assumption.
-      * apply H9.
+      * apply H10.
     + eexists.
       apply E_NonDet2.
       apply E_Seq with st3 q3.
