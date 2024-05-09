@@ -1,0 +1,6 @@
+x := 0;
+while x <= 10 do
+    x := x + 1;
+    (skip !! res := x)
+end;
+res = 5 -> skip
