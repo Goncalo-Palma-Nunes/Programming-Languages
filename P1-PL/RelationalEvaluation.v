@@ -668,24 +668,40 @@ Proof.
   intros c1 c1' c2 c2' H1 H2.
   apply conj;
   unfold cequiv_imp;
-  intros st1 st2 q1 q2 result H; inversion H; subst; eexists.
-  + apply E_NonDet1.
-    replace c1' with c1.
-    -- apply H9.
-    -- admit. 
-  + apply E_NonDet2.
-    replace c2' with c2.
-    -- apply H9.
-    -- admit.
-  + apply E_NonDet1.
-    replace c1 with c1'.
-    -- apply H9.
-    -- admit.
-  + apply E_NonDet2.
-    replace c2 with c2'.
-    -- apply H9.
-    -- admit.
-Admitted.
+  intros st1 st2 q1 q2 result H; inversion H; subst.
+  - inversion H1.
+    unfold cequiv_imp in H0.
+    specialize H0 with st1 st2 q1 q'' result.
+    destruct H0 as [q3 H0].
+    + assumption.
+    + eexists.
+      apply E_NonDet1.
+      apply H0.
+  - inversion H2.
+    unfold cequiv_imp in H0.
+    specialize H0 with st1 st2 q1 q'' result.
+    destruct H0 as [q3 H0].
+    + assumption.
+    + eexists.
+      apply E_NonDet2.
+      apply H0.
+  - inversion H1.
+    unfold cequiv_imp in H3.
+    specialize H3 with st1 st2 q1 q'' result.
+    destruct H3 as [q3 H3].
+    + assumption.
+    + eexists.
+      apply E_NonDet1.
+      apply H3.
+  - inversion H2.
+    unfold cequiv_imp in H3.
+    specialize H3 with st1 st2 q1 q'' result.
+    destruct H3 as [q3 H3].
+    + assumption.
+    + eexists.
+      apply E_NonDet2.
+      apply H3.
+Qed.
 
 Theorem skip_left : forall c,
   <{ skip ; c }> == c.
