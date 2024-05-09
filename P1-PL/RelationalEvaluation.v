@@ -508,22 +508,41 @@ Proof.
   apply conj; (* Prove each side of the /\ in cequiv *)
   unfold cequiv_imp;
   intros st1 st2 q1 q2 result H;  exists q1.
-  (*
   - inversion H; subst.
-    + inversion H3; subst.
-      * inversion H10. subst.
+    + inversion H2; subst.
+      * inversion H9. subst.
         simpl in *.
-        inversion H9; subst.
-        -- inversion H4.
-        -- admit.
-        -- admit.
-        admit.
-      * admit.
-    + admit.
-  - admit.*)
-  (* TODO *)
-Admitted.
-
+        inversion H8; subst.
+        -- inversion H3.
+        -- inversion H11.
+        -- inversion H4. subst.
+           inversion H5. subst.
+           simpl in *.
+           inversion H13; subst.
+           ++ inversion H15. subst.
+              replace (X !-> 2; X !-> 1; st'') with (X !-> 2; st'') by (symmetry; apply t_update_shadow).
+              apply E_Asgn.
+           ++ inversion H6.
+      * inversion H9. subst.
+        simpl in *.
+        inversion H8; subst; try inversion H3.
+        inversion H11. subst.
+        apply E_Asgn.
+    + inversion H7; subst; inversion H8.
+  - inversion H. subst.
+    simpl in *.
+    apply E_Seq with (X !-> 1; st1) ((st1, <{X := 2}>) :: q2).
+    + apply E_NonDet1.
+      apply E_Asgn.
+    + apply E_GuardFalse_Cont with st1 (X !-> 2; st1) q2 q2 <{X := 2}>.
+      * reflexivity.
+      * reflexivity.
+      * replace (X !-> 2; st1) with (X !-> 2; X !-> 1; st1) by apply t_update_shadow.
+        apply E_Asgn.
+      * apply E_GuardTrue.
+        -- reflexivity.
+        -- apply E_Skip.
+Qed.
 
 Lemma choice_idempotent: forall c,
 <{ c !! c }> == <{ c }>.
