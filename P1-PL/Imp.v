@@ -118,6 +118,7 @@ Fixpoint aeval_opt (st : state) (a : aexp) : nat :=
   | AId x => st x                            (* <--- NEW *)
   | <{0 + a2}> => (aeval_opt st a2)
   | <{a1 + a2}> => (aeval_opt st a1) + (aeval_opt st a2)
+  | <{a1 - 0}> => (aeval_opt st a1)
   | <{a1 - a2}> => (aeval_opt st a1) - (aeval_opt st a2)
   | <{a1 * a2}> => (aeval_opt st a1) * (aeval_opt st a2)
   end.
@@ -132,8 +133,11 @@ Proof.
   - inversion IHa1. inversion IHa2.
     simpl. rewrite H1. rewrite H0. destruct a1; try reflexivity.
     destruct n; try reflexivity.
-  - simpl. rewrite IHa1. rewrite IHa2. reflexivity.
-  - simpl. rewrite IHa1. rewrite IHa2. reflexivity.
+  - inversion IHa1. inversion IHa2.
+    simpl. rewrite H1. rewrite H0. destruct a2; try reflexivity.
+    destruct n; repeat (simpl; lia).
+  - inversion IHa1. inversion IHa2.
+    simpl. rewrite H1. rewrite H0. destruct a1; try reflexivity.
 Qed.
 
 Fixpoint beval (st : state) (b : bexp) : bool :=
