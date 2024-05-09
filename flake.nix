@@ -15,6 +15,7 @@
             coq
             coqPackages.coqide
             coqPackages.vscoq-language-server
+            ocamlPackages.ocaml
           ];
         };
       }
