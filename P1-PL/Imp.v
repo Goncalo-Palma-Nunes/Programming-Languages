@@ -149,8 +149,8 @@ Fixpoint beval_opt (st : state) (b : bexp) : bool :=
   match b with
   | <{true}>      => true
   | <{false}>     => false
-  | <{a1 = a2}>   => (aeval st a1) =? (aeval st a2)
-  | <{a1 <= a2}>  => (aeval st a1) <=? (aeval st a2)
+  | <{a1 = a2}>   => (aeval_opt st a1) =? (aeval_opt st a2)
+  | <{a1 <= a2}>  => (aeval_opt st a1) <=? (aeval_opt st a2)
   | <{~ b1}>      => negb (beval_opt st b1)
   | <{false && b1}> => false
   | <{b1 && b2}>  => andb (beval_opt st b1) (beval_opt st b2)
@@ -170,7 +170,16 @@ Theorem beval_equiv_beval_opt: ∀(st : state) (b : bexp),
   beval st b = beval_opt st b.
 Proof.
   intros st b.
-  induction b; simpl; try reflexivity.
+  induction b; try simpl;
+
+  (* Take advantage of already proven equivalence 
+  between aeval and aeval_opt *)
+  try (rewrite aeval_equiv with (st:=st) (a:=a1));
+  try (rewrite aeval_equiv with (st:=st) (a:=a2));
+  
+  (* Prove easy subgoals *)
+  try reflexivity.
+
   - rewrite IHb. reflexivity.
   - rewrite IHb1. rewrite IHb2. destruct b1; simpl; reflexivity.
 Qed.
