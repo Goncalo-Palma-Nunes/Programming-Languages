@@ -129,17 +129,21 @@ Theorem aeval_equiv : ∀(st : state) (a : aexp),
   aeval st a = aeval_opt st a.
 Proof.
   intros st a.
-  induction a.
-  - simpl. reflexivity.
-  - simpl. reflexivity.
-  - inversion IHa1. inversion IHa2.
-    simpl. rewrite H1. rewrite H0. destruct a1; try reflexivity.
+  induction a; 
+  
+  try reflexivity; (* Solve easy subgoals *)
+
+  (* Common portion of the three harder subgoals *)
+  inversion IHa1; inversion IHa2;
+  simpl; rewrite H0; rewrite H1.
+
+  - destruct a1; try reflexivity.
     destruct n; try reflexivity.
-  - inversion IHa1. inversion IHa2.
-    simpl. rewrite H1. rewrite H0. destruct a2; try reflexivity.
+
+  - destruct a2; try reflexivity.
     destruct n; repeat (simpl; lia).
-  - inversion IHa1. inversion IHa2.
-    simpl. rewrite H1. rewrite H0. destruct a1; try reflexivity.
+
+  - destruct a1; try reflexivity.
     destruct n.
     -- simpl. lia.
     -- destruct n; simpl; lia.
