@@ -621,37 +621,45 @@ Proof.
   intros c1 c2 c3.
   apply conj;
   unfold cequiv_imp;
-  intros st1 st2 q1 q2 result H; inversion H; subst; eexists.
+  intros st1 st2 q1 q2 result H; inversion H; subst.
   - 
-    apply E_NonDet2.
-    apply E_Seq with st3 q3.
-    -- apply H2.
-    -- admit. (* There is probably something wrong here
-                In both cases hwere we do apply 'E_Seq with stY qX'.
-                we can't finish the second subgoal *)
+    inversion H8; subst.
+    + eexists.
+      apply E_NonDet1.
+      apply E_Seq with st3 q3.
+      * assumption.
+      * apply H9.
+    + eexists.
+      apply E_NonDet2.
+      apply E_Seq with st3 q3.
+      * assumption.
+      * apply H9.
   - 
+    eexists.
     apply E_NonDet2.
     apply E_SeqFT.
     apply H7.
   - 
     inversion H7; subst.
-    -- 
+    + eexists.
       apply E_Seq with st3 q2.
-      --- apply H2.
-      --- admit.
-    -- 
+      * apply H2.
+      * apply E_NonDet1.
+        apply H9.
+    + eexists.
       apply E_SeqFT.
       apply H8.
   - 
     inversion H7; subst.
-    -- 
+    + eexists.
       apply E_Seq with st3 q2.
-      --- apply H2.
-      --- admit.
-    -- 
+      * apply H2.
+      * apply E_NonDet2.
+        apply H9.
+    + eexists.
       apply E_SeqFT.
       apply H8.
-Admitted. (* TODO - Finish *)
+Qed.
 
 Lemma choice_congruence: forall c1 c1' c2 c2',
 c1 == c1' -> c2 == c2' ->
