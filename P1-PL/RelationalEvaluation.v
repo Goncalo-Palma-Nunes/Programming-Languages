@@ -30,6 +30,12 @@ Reserved Notation "st1 '/' q1 '=[' c ']=>' st2 '/' q2 '/' r"
 3. TODO: Define the relational semantics (ceval) to support the required constructs.
 *)
 
+(* True if qout has a prefix of qin, and all other elements are sequences ending in c2 *)
+Definition is_sequence_continuation (qin qout : list (state * com)) (c2: com) : Prop :=
+exists n q, qout = firstn n qin ++ q /\ Forall (fun x => exists c1, snd x = <{ c1; c2 }>) q.
+
+(* Relational semantics *)
+
 Inductive ceval : com -> state -> list (state * com) -> 
           result -> state -> list (state * com) -> Prop :=
 | E_Skip : forall st q,
@@ -44,12 +50,13 @@ Inductive ceval : com -> state -> list (state * com) ->
         Sequence Rules
 **************************************)
 
-| E_Seq : forall st1 q1 c1 st2 q2 c2 st3 q3 r,
+| E_Seq : forall st1 q1 c1 st2 q2 q3 c2 st3 q4 r,
   (* if first command succeeds, the end result is the same as the result
    or running the second command after the first *)
+  is_sequence_continuation q2 q3 c2 ->
   st1 / q1 =[ c1 ]=> st2 / q2 / Success ->
-  st2 / q2 =[ c2 ]=> st3 / q3 / r ->
-  st1 / q1 =[ c1 ; c2 ]=> st3 / q3 / r
+  st2 / q3 =[ c2 ]=> st3 / q4 / r ->
+  st1 / q1 =[ c1 ; c2 ]=> st3 / q4 / r
 
 | E_SeqFT : forall st1 q1 c1 st2 q2 c2,
   (* if first command fails, the sequence fails *)
@@ -161,11 +168,19 @@ Y := 3;
 Z := 4
 ]=> (Z !-> 4 ; Y !-> 3 ; X !-> 2) / [] / Success.
 Proof.
-  apply E_Seq with (X !-> 2; empty_st) [].
+  apply E_Seq with (X !-> 2; empty_st) [] [].
+  - (* Continuation *)
+    unfold is_sequence_continuation. exists 0. exists []. simpl. split.
+    + reflexivity.
+    + apply Forall_nil.
   - (* Assignment command *)
     apply E_Asgn.
   - (* Sequence command *)
-    apply E_Seq with (Y !-> 3; X !-> 2) [].
+    apply E_Seq with (Y !-> 3; X !-> 2) [] [].
+    + (* Continuation *)
+      unfold is_sequence_continuation. exists 0. exists []. simpl. split.
+      * reflexivity.
+      * apply Forall_nil.
     + (* Assignment command *)
       apply E_Asgn.
     + (* Assignment command *)
@@ -241,7 +256,11 @@ empty_st / [] =[
    X := 2
 ]=> (X !-> 4) / [] / Fail. (* also works if end state is empty_st *)
 Proof.
-  apply E_Seq with (X !-> 4; empty_st) [].
+  apply E_Seq with (X !-> 4; empty_st) [] [].
+  - (* Continuation *)
+    unfold is_sequence_continuation. exists 0. exists []. simpl. split.
+    + reflexivity.
+    + apply Forall_nil.
   - (* Assignment command *)
     apply E_Asgn.
   - (* Guard command *)
@@ -257,7 +276,11 @@ empty_st / [] =[
    (X = 1) -> X:=3
 ]=> (empty_st) / [] / Fail.
 Proof.
-  apply E_Seq with (X !-> 2; empty_st) [].
+  apply E_Seq with (X !-> 2; empty_st) [] [].
+  - (* Continuation *)
+    unfold is_sequence_continuation. exists 0. exists []. simpl. split.
+    + reflexivity.
+    + apply Forall_nil.
   - (* Assignment command *)
     apply E_Asgn.
   - (* Guard command *)
@@ -272,7 +295,11 @@ empty_st / [] =[
    (X = 2) -> X:=3
 ]=> (X !-> 3 ; X !-> 2) / [] / Success.
 Proof.
-  apply E_Seq with (X !-> 2; empty_st) [].
+  apply E_Seq with (X !-> 2; empty_st) [] [].
+  - (* Continuation *)
+    unfold is_sequence_continuation. exists 0. exists []. simpl. split.
+    + reflexivity.
+    + apply Forall_nil.
   - (* Assignment command *)
     apply E_Asgn.
   - (* Guard command *)
@@ -301,8 +328,16 @@ empty_st / [] =[
 Proof.
   replace (X !-> 3) with (X !-> 3; X !-> 2);
   try apply t_update_shadow. (* Update map with final state *)
-  exists [(empty_st, CAsgn X 1)]. (* Final continuation list *)
-  apply E_Seq with (X !-> 2; empty_st) [(empty_st, CAsgn X 1)].
+  exists [(empty_st, <{X := 2; (X = 2) -> X := 3 }>)]. (* Final continuation list *)
+  apply E_Seq with (X !-> 2; empty_st) [(empty_st, CAsgn X 1)] [(empty_st, <{X := 2; (X = 2) -> X := 3 }>)].
+  - (* Continuation *)
+    unfold is_sequence_continuation.
+    exists 0.
+    exists [(empty_st, <{X := 2; (X = 2) -> X := 3 }>)]. simpl. split.
+    + reflexivity.
+    + apply Forall_cons.
+      * exists <{X := 2}>. reflexivity.
+      * apply Forall_nil.
   - (* Non-deterministic choice *)
     apply E_NonDet2. 
     apply E_Asgn. (* result depends on result of the command picked *)
@@ -475,15 +510,52 @@ Lemma cequiv_ex1:
 Proof.
   apply conj; (* Prove each side of the /\ in cequiv *)
   unfold cequiv_imp;
-  intros st1 st2 q1 q2 result H.
-  - inversion H; subst. admit.
-  - admit.
-Admitted. (* TODO - Finish *)
+  intros st1 st2 q1 q2 result H;
+  exists q1.
+  - inversion H; subst.
+    + inversion H3. subst.
+      simpl in *.
+      destruct result.
+      * inversion H9; subst.
+        -- inversion H11. assumption.
+        -- inversion H4.
+      * inversion H9.
+        -- inversion H11.
+        -- inversion H4.
+        -- inversion H4.
+    + inversion H7.
+  - inversion H. subst.
+    simpl in *.
+    apply E_Seq with (X !-> 2; st1) q2 q2.
+    + unfold is_sequence_continuation. exists (length q2). exists []. simpl. split.
+      * replace (firstn (length q2) q2) with q2 by (symmetry; apply firstn_all).
+        symmetry. apply app_nil_r.
+      * apply Forall_nil.
+    + assumption.
+    + apply E_GuardTrue.
+      * reflexivity.
+      * apply E_Skip.
+Qed.
 
 Lemma cequiv_ex2:
 <{ (X := 1 !! X := 2); X = 2 -> skip }> == 
 <{ X := 2 }>.
 Proof.
+  apply conj; (* Prove each side of the /\ in cequiv *)
+  unfold cequiv_imp;
+  intros st1 st2 q1 q2 result H;  exists q1.
+  - inversion H; subst.
+    + inversion H3; subst.
+      * inversion H10. subst.
+        simpl in *.
+        inversion H9; subst.
+        -- inversion H4.
+        -- admit.
+        -- admit.
+        admit.
+      * admit.
+    + admit.
+  - admit.
   (* TODO *)
 Admitted.
 
