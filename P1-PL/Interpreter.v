@@ -27,53 +27,6 @@ Notation "'LETOPT' st cont <== e1 'IN' e2"
              See the notation LETOPT in the ImpCEval chapter.
 *)
 
-(*Fixpoint ceval_step_inner (st : state) (c : com) (continuation: list (state * com)) (i : nat) (suffix: option com)
-                          : interpreter_result :=
-  match i with
-  | 0 => OutOfGas
-  | S n => match c with
-          | <{ skip }> => Success (st, continuation)
-          | <{ x := a }> => Success ((x !-> (aeval st a) ; st), continuation) (* Update total_map st with binding *)
-          | <{ c1 ; c2 }> =>
-              let suffix' := match suffix with
-                | Some c' => Some <{ c2; c' }>
-                | None => Some c2
-              end in match ceval_tep_inner st c1 continuation n suffix' with (* TODO - use LETOPT notations *)
-              | Success (st', continuation') => ceval_step_inner st' c2 continuation' n suffix
-              | Fail => Fail
-              | OutOfGas => OutOfGas
-              end
-          | CIf b c1 c2 => (* TODO use the Imp language notation *)
-              if (beval st b)
-                then ceval_step_inner st c1 continuation n suffix
-                else ceval_step_inner st c2 continuation n suffix
-          | CWhile b c1 => (* TODO use the Imp language notation *)
-              if (beval st b)
-                then match ceval_step_inner st c1 continuation n suffix with (* TODO use the Imp Notation *)
-                | Success (st', continuation') => ceval_step_inner st' c continuation' n suffix (* Repeat while with new state *)
-                | Fail => Fail
-                | OutOfGas => OutOfGas
-                end
-                else Success (st, continuation)
-          | <{ c1 !! c2 }> =>  ceval_step_inner st c1 ( (st, match suffix with
-            | Some c' => <{ (c2; c') }>
-            | None => c2
-            end) :: continuation) n suffix
-          | <{ b -> c1 }> =>
-            if (beval st b)
-              then ceval_step_inner st c1 continuation n suffix
-              else match continuation with (* Backtrack non-deterministic choice *)
-                | [] => Fail (* No remaining non-deterministic choices to execute *)
-                | (st', c') :: continuation' => ceval_step_inner st' c' continuation' n suffix
-              end
-          end
-  end.
-
-Definition ceval_step (st : state) (c : com) (continuation: list (state * com)) (i : nat)
-                    : interpreter_result :=
-  ceval_step_inner st c continuation i None.      
-*)
-
 Fixpoint ceval_step (st : state) (c : com) (continuation: list (state * com)) (i : nat)
                     : interpreter_result :=
   match i with
@@ -206,20 +159,6 @@ Proof.
   rewrite H. reflexivity.
 Qed.
 
-Lemma skip_always_succeeds: forall (st : state) cont (c : com) (c1 : com)
-  (n : nat) (x : string) (i : nat),
-  ceval_step st c cont i = Success (st, cont) ->
-  c1 = <{ skip }> ->
-  i >= 1 ->
-  ceval_step st <{ c ; c1 }> cont i = Success (st, cont).
-Proof.
-  intros st cont c c1 n x i H H0 H1.
-  induction c.
-  - simpl. rewrite H0. destruct i.
-    -- lia.
-    -- 
-Admitted.
-
 Lemma seq_assoc: forall st cont c1 c2 c3
   (n : nat) (x : string) (i : nat),
   ceval_step st <{ c1 ; c2 ; c3 }> cont i = ceval_step st <{ c1 ; (c2 ; c3) }> cont i.
@@ -229,42 +168,6 @@ Proof.
   - simpl. reflexivity.
   - simpl. reflexivity.
 Qed.
-
-Lemma seq_skip: forall st cont c1
-  (n : nat) (x : string) (i : nat),
-  i >= 1 ->
-  ceval_step st <{ c1 ; skip }> cont i = ceval_step st c1 cont i.
-Proof.
-  intros st cont c1 n x i H.
-  induction i.
-  - simpl. reflexivity.
-  - destruct c1.
-    -- simpl.
-  (* TODO *)
-Admitted.
-
-Lemma seq_skip_commutativity: forall st cont c1
-  (n : nat) (x : string) (i : nat),
-  ceval_step st <{ c1 ; skip }> cont i = ceval_step st <{ skip ; c1 }> cont i.
-Proof.
-  intros st cont c1 n x i.
-  induction i.
-  - simpl. reflexivity.
-  (* TODO *)
-Admitted.
-
-
-Lemma non_det_assignment : forall st cont
-  (n1 n2 : nat) (x1 x2 : string) (i : nat),
-  i >= 1 ->
-  ceval_step st <{ x1 := n1 !! x2 := n2 }> cont i = Success ((x1 !-> n1 ; st), cont).
-Proof.
-  intros st cont n1 n2 x1 x2 i H.
-  induction i.
-  - lia.
-  - rewrite <- IHi.
-  (* TODO *)
-Admitted.
 
 (* Lemma seq_cond_guard: forall st cont c
   (n : nat) (x : string) (i : nat),
@@ -283,26 +186,6 @@ Proof.
   do 5 (destruct i1; try lia).
   reflexivity.
 Qed.
-
-(*
-  assert (H1: exists i2, i1 = S (S (S (S (S i2))))). {
-    destruct i1.
-    - lia.
-    - destruct i1.
-      + lia.
-      + destruct i1.
-        * lia.
-        * destruct i1.
-          -- lia.
-          -- destruct i1.
-            ++ lia.
-            ++ exists i1. reflexivity.
-  }
-  destruct H1 as [i2 H1].
-  rewrite H1.
-  induction i2.
-  - simpl.
-Admitted.*)
 
 (**
   2.3. TODO: Prove ceval_step_more.
