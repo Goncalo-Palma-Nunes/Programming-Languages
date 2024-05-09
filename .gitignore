@@ -6,4 +6,9 @@
 *.vos
 *.vok
 *.d
+*.cmi
+*.mli
+*.cmo
+interpreter
+imp.ml
 .lia.cache
