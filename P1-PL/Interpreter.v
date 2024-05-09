@@ -27,6 +27,51 @@ Notation "'LETOPT' st cont <== e1 'IN' e2"
              See the notation LETOPT in the ImpCEval chapter.
 *)
 
+Fixpoint ceval_step_opt (st : state) (c : com) (continuation: list (state * com)) (i : nat)
+                    : interpreter_result :=
+  (* Note: Most of these optimizations are commented out, because
+  we wanted to prove them incrementally *)
+  match i with
+  | 0 => OutOfGas
+  | S n => match c with
+          | <{ skip }> => Success (st, continuation)
+
+          (* Use optimized aeval *)
+          | <{ x := a }> => Success ((x !-> (aeval_opt st a) ; st), continuation) (* Update total_map st with binding *)
+          (* | <{ skip; c1 }> => ceval_step_opt st c1 continuation n *)
+          (* | <{ c1 ; skip }> => ceval_step_opt st c1 continuation n *)
+          | <{ c1 ; c2 }> =>
+            LETOPT st' continuation' <== ceval_step_opt st c1 continuation n
+            IN ceval_step_opt st' c2 continuation' n
+          | <{ if b then c1 else c2 end }> =>
+            if beval_opt st b (* Use optimized beval *)
+            then ceval_step_opt st c1 continuation n
+            else ceval_step_opt st c2 continuation n
+          (* | <{ while b do <{ skip }> end }> => OutOfGas *)
+          | <{ while b do c1 end }> =>
+            if beval_opt st b (* Use optimized beval *)
+            then
+              LETOPT st' continuation' <== ceval_step_opt st c1 continuation n
+              IN ceval_step_opt st' c continuation' n (* Repeat while with new state *)
+            else Success (st, continuation)
+          | <{ c1 !! c2 }> => ceval_step_opt st c1 ( (st, c2) :: continuation) n
+          (* | <{ b -> <{ skip }> }> =>
+            if (beval_opt st b) (* Use optimized beval *)
+              then Success (st, continuation)
+              else match continuation with (* Backtrack non-deterministic choice *)
+                | [] => Fail (* No remaining non-deterministic choices to execute *)
+                | (st', c') :: continuation' => ceval_step_opt st' c' continuation' n
+              end *)
+          | <{ b -> c1 }> =>
+            if (beval_opt st b) (* Use optimized beval *)
+              then ceval_step_opt st c1 continuation n
+              else match continuation with (* Backtrack non-deterministic choice *)
+                | [] => Fail (* No remaining non-deterministic choices to execute *)
+                | (st', c') :: continuation' => ceval_step_opt st' <{ c'; c }> continuation' n
+              end
+          end
+  end.
+
 Fixpoint ceval_step (st : state) (c : com) (continuation: list (state * com)) (i : nat)
                     : interpreter_result :=
   match i with
@@ -41,7 +86,7 @@ Fixpoint ceval_step (st : state) (c : com) (continuation: list (state * com)) (i
             if beval st b
             then ceval_step st c1 continuation n
             else ceval_step st c2 continuation n
-          | <{ while b do c1 end }> => (* TODO use the Imp language notation *)
+          | <{ while b do c1 end }> =>
             if beval st b
             then
               LETOPT st' continuation' <== ceval_step st c1 continuation n
@@ -169,12 +214,6 @@ Proof.
   - simpl. reflexivity.
 Qed.
 
-(* Lemma seq_cond_guard: forall st cont c
-  (n : nat) (x : string) (i : nat),
-  ceval_step st <{ x := n ; x = n -> skip }> cont i = ceval_step st <{ x := n; skip }> cont i.
-Proof.
-  intros st cont c n x i. *)
-
 (* For all possible states and continuations, there exists an amount of gas i0,
 such that any amount of gas i1 greater than or equal to i0, is enough for the evaluation
 (with ceval_step) of p1 and p2 to be the same. *)
@@ -245,3 +284,18 @@ Proof.
           destruct p.
           apply (IHi1' i2') in Hceval; assumption.
 Qed.
+
+
+(* Theorem ceval_opt_equals_ceval: forall st c cont n,
+  ceval_step st c cont n = ceval_step_opt st c cont n.
+Proof.
+  induction n as [|n' IHn'].
+  - simpl. reflexivity.
+  - destruct c.
+    + (* skip *)
+      simpl. reflexivity.
+    + (* := *)
+      simpl. rewrite aeval_equiv with (st:=st) (a:=a). reflexivity.
+    + (* ; *)
+      admit.
+Admitted. *)
