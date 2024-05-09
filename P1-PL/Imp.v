@@ -121,6 +121,7 @@ Fixpoint aeval_opt (st : state) (a : aexp) : nat :=
   | <{a1 - 0}> => (aeval_opt st a1)
   | <{a1 - a2}> => (aeval_opt st a1) - (aeval_opt st a2)
   | <{1 * a2}> => (aeval_opt st a2)
+  | <{0 * a2}> => 0
   | <{a1 * a2}> => (aeval_opt st a1) * (aeval_opt st a2)
   end.
 
@@ -144,6 +145,17 @@ Proof.
     -- destruct n; simpl; lia.
 Qed.
 
+Fixpoint beval_opt (st : state) (b : bexp) : bool :=
+  match b with
+  | <{true}>      => true
+  | <{false}>     => false
+  | <{a1 = a2}>   => (aeval st a1) =? (aeval st a2)
+  | <{a1 <= a2}>  => (aeval st a1) <=? (aeval st a2)
+  | <{~ b1}>      => negb (beval_opt st b1)
+  | <{false && b1}> => false
+  | <{b1 && b2}>  => andb (beval_opt st b1) (beval_opt st b2)
+  end.
+
 Fixpoint beval (st : state) (b : bexp) : bool :=
   match b with
   | <{true}>      => true
@@ -153,6 +165,15 @@ Fixpoint beval (st : state) (b : bexp) : bool :=
   | <{~ b1}>      => negb (beval st b1)
   | <{b1 && b2}>  => andb (beval st b1) (beval st b2)
   end.
+
+Theorem beval_equiv_beval_opt: ∀(st : state) (b : bexp),
+  beval st b = beval_opt st b.
+Proof.
+  intros st b.
+  induction b; simpl; try reflexivity.
+  - rewrite IHb. reflexivity.
+  - rewrite IHb1. rewrite IHb2. destruct b1; simpl; reflexivity.
+Qed.
 
 (** Some basic definitions for these are defined *)
 
