@@ -112,54 +112,6 @@ Fixpoint aeval (st : state) (a : aexp) : nat :=
   | <{a1 * a2}> => (aeval st a1) * (aeval st a2)
   end.
 
-Fixpoint aeval_opt (st : state) (a : aexp) : nat :=
-  match a with
-  | ANum n => n
-  | AId x => st x                            (* <--- NEW *)
-  | <{0 + a2}> => (aeval_opt st a2)
-  | <{a1 + a2}> => (aeval_opt st a1) + (aeval_opt st a2)
-  | <{a1 - 0}> => (aeval_opt st a1)
-  | <{a1 - a2}> => (aeval_opt st a1) - (aeval_opt st a2)
-  | <{1 * a2}> => (aeval_opt st a2)
-  | <{0 * a2}> => 0
-  | <{a1 * a2}> => (aeval_opt st a1) * (aeval_opt st a2)
-  end.
-
-Theorem aeval_equiv : ∀(st : state) (a : aexp),
-  aeval st a = aeval_opt st a.
-Proof.
-  intros st a.
-  induction a; 
-  
-  try reflexivity; (* Solve easy subgoals *)
-
-  (* Common portion of the three harder subgoals *)
-  inversion IHa1; inversion IHa2;
-  simpl; rewrite H0; rewrite H1.
-
-  - destruct a1; try reflexivity.
-    destruct n; try reflexivity.
-
-  - destruct a2; try reflexivity.
-    destruct n; repeat (simpl; lia).
-
-  - destruct a1; try reflexivity.
-    destruct n.
-    -- simpl. lia.
-    -- destruct n; simpl; lia.
-Qed.
-
-Fixpoint beval_opt (st : state) (b : bexp) : bool :=
-  match b with
-  | <{true}>      => true
-  | <{false}>     => false
-  | <{a1 = a2}>   => (aeval_opt st a1) =? (aeval_opt st a2)
-  | <{a1 <= a2}>  => (aeval_opt st a1) <=? (aeval_opt st a2)
-  | <{~ b1}>      => negb (beval_opt st b1)
-  | <{false && b1}> => false
-  | <{b1 && b2}>  => andb (beval_opt st b1) (beval_opt st b2)
-  end.
-
 Fixpoint beval (st : state) (b : bexp) : bool :=
   match b with
   | <{true}>      => true
@@ -169,24 +121,6 @@ Fixpoint beval (st : state) (b : bexp) : bool :=
   | <{~ b1}>      => negb (beval st b1)
   | <{b1 && b2}>  => andb (beval st b1) (beval st b2)
   end.
-
-Theorem beval_equiv_beval_opt: ∀(st : state) (b : bexp),
-  beval st b = beval_opt st b.
-Proof.
-  intros st b.
-  induction b; try simpl;
-
-  (* Take advantage of already proven equivalence 
-  between aeval and aeval_opt *)
-  try (rewrite aeval_equiv with (st:=st) (a:=a1));
-  try (rewrite aeval_equiv with (st:=st) (a:=a2));
-  
-  (* Prove easy subgoals *)
-  try reflexivity.
-
-  - rewrite IHb. reflexivity.
-  - rewrite IHb1. rewrite IHb2. destruct b1; simpl; reflexivity.
-Qed.
 
 (** Some basic definitions for these are defined *)
 

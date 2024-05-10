@@ -26,55 +26,6 @@ Notation "'LETOPT' st cont <== e1 'IN' e2"
              you are strongly encouraged to define auxiliary notation.
              See the notation LETOPT in the ImpCEval chapter.
 *)
-
-Fixpoint ceval_step_opt (st : state) (c : com) (continuation: list (state * com)) (i : nat)
-                    : interpreter_result :=
-  (* Note: Most of these optimizations are commented out, because
-  we wanted to prove them incrementally *)
-  match i with
-  | 0 => OutOfGas
-  | S n => match c with
-          | <{ skip }> => Success (st, continuation)
-
-          (* Use optimized aeval *)
-          | <{ x := a }> => Success ((x !-> (aeval_opt st a) ; st), continuation) (* Update total_map st with binding *)
-          (* | <{ skip; c1 }> => ceval_step_opt st c1 continuation n *)
-          (* | <{ c1 ; skip }> => ceval_step_opt st c1 continuation n *)
-          | <{ c1 ; c2 }> =>
-            LETOPT st' continuation' <== ceval_step_opt st c1 continuation n
-            IN ceval_step_opt st' c2 continuation' n
-          | <{ if b then c1 else c2 end }> =>
-            if beval_opt st b (* Use optimized beval *)
-            then ceval_step_opt st c1 continuation n
-            else ceval_step_opt st c2 continuation n
-          (* | <{ while b do <{ skip }> end }> => 
-            if beval_opt st b (* Use optimized beval *)
-            then OutOfGas (* Infinite loop *)
-            else Success (st, continuation) *)
-          | <{ while b do c1 end }> =>
-            if beval_opt st b (* Use optimized beval *)
-            then
-              LETOPT st' continuation' <== ceval_step_opt st c1 continuation n
-              IN ceval_step_opt st' c continuation' n (* Repeat while with new state *)
-            else Success (st, continuation)
-          | <{ c1 !! c2 }> => ceval_step_opt st c1 ( (st, c2) :: continuation) n
-          (* | <{ b -> <{ skip }> }> =>
-            if (beval_opt st b) (* Use optimized beval *)
-              then Success (st, continuation)
-              else match continuation with (* Backtrack non-deterministic choice *)
-                | [] => Fail (* No remaining non-deterministic choices to execute *)
-                | (st', c') :: continuation' => ceval_step_opt st' c' continuation' n
-              end *)
-          | <{ b -> c1 }> =>
-            if (beval_opt st b) (* Use optimized beval *)
-              then ceval_step_opt st c1 continuation n
-              else match continuation with (* Backtrack non-deterministic choice *)
-                | [] => Fail (* No remaining non-deterministic choices to execute *)
-                | (st', c') :: continuation' => ceval_step_opt st' <{ c'; c }> continuation' n
-              end
-          end
-  end.
-
 Fixpoint ceval_step_suf (st : state) (c : com) (continuation: list (state * com)) (i : nat) (suf : option com)
                       : interpreter_result :=
   match i with
@@ -118,39 +69,6 @@ Fixpoint ceval_step_suf (st : state) (c : com) (continuation: list (state * com)
 Definition ceval_step (st : state) (c : com) (continuation: list (state * com)) (i : nat)
                     : interpreter_result :=
   ceval_step_suf st c continuation i None.
-
-(*
-Fixpoint ceval_step (st : state) (c : com) (continuation: list (state * com)) (i : nat)
-                    : interpreter_result :=
-  match i with
-  | 0 => OutOfGas
-  | S n => match c with
-          | <{ skip }> => Success (st, continuation)
-          | <{ x := a }> => Success ((x !-> (aeval st a) ; st), continuation) (* Update total_map st with binding *)
-          | <{ c1 ; c2 }> =>
-            LETOPT st' continuation' <== ceval_step st c1 continuation n
-            IN ceval_step st' c2 continuation' n
-          | <{ if b then c1 else c2 end }> =>
-            if beval st b
-            then ceval_step st c1 continuation n
-            else ceval_step st c2 continuation n
-          | <{ while b do c1 end }> =>
-            if beval st b
-            then
-              LETOPT st' continuation' <== ceval_step st c1 continuation n
-              IN ceval_step st' c continuation' n (* Repeat while with new state *)
-            else Success (st, continuation)
-          | <{ c1 !! c2 }> => ceval_step st c1 ( (st, c2) :: continuation) n
-          | <{ b -> c1 }> =>
-            if (beval st b)
-              then ceval_step st c1 continuation n
-              else match continuation with (* Backtrack non-deterministic choice *)
-                | [] => Fail (* No remaining non-deterministic choices to execute *)
-                | (st', c') :: continuation' => ceval_step st' <{ c'; c }> continuation' n
-              end
-          end
-  end.
-*)
 
 (* EXTRA: optimizes a given arithmetic expression *)
 Fixpoint optimize_aexp (a: aexp) : aexp :=
@@ -202,6 +120,18 @@ Fixpoint optimize_bexp (b: bexp) : bexp :=
     | (b1, b2) => <{b1 && b2}>
     end
   | b => b
+  end.
+
+(* EXTRA: optimizes a given command *)
+Fixpoint optimize_com (c : com) : com :=
+  match c with
+  | <{ x := a }> => <{ x := optimize_aexp a }>
+  | <{ c1 ; c2 }> => <{ optimize_com c1 ; optimize_com c2 }>
+  | <{ if b then c1 else c2 end }> => <{ if optimize_bexp b then optimize_com c1 else optimize_com c2 end }>
+  | <{ while b do c1 end }> => <{ while optimize_bexp b do optimize_com c1 end }>
+  | <{ c1 !! c2 }> => <{ optimize_com c1 !! optimize_com c2 }>
+  | <{ b -> c1 }> => <{ optimize_bexp b -> optimize_com c1 }>
+  | c => c
   end.
 
 (* Helper functions that help with running the interpreter *)
@@ -442,16 +372,54 @@ Proof.
     destruct (optimize_bexp b1); destruct (optimize_bexp b2); reflexivity.
 Qed.
 
-(* Theorem ceval_opt_equals_ceval: forall st c cont n,
-  ceval_step st c cont n = ceval_step_opt st c cont n.
+Definition com_equiv (c1 c2 : com) : Prop := forall st i cont suf,
+  match (ceval_step_suf st c1 cont i suf, ceval_step_suf st c2 cont i suf) with
+  | (Success (st1, _), Success (st2, _)) => st1 = st2
+  | (Fail, Fail) => True
+  | (OutOfGas, OutOfGas) => True
+  | _ => False
+  end.
+
+Lemma com_equiv_seq : forall c1 c2 c3 c4,
+  com_equiv c1 c3 /\ com_equiv c2 c4 ->
+  com_equiv <{c1; c2}> <{c3; c4}>.
 Proof.
-  induction n as [|n' IHn'].
-  - simpl. reflexivity.
-  - destruct c.
-    + (* skip *)
-      simpl. reflexivity.
-    + (* := *)
-      simpl. rewrite aeval_equiv with (st:=st) (a:=a). reflexivity.
-    + (* ; *)
-      admit.
-Admitted. *)
+Admitted.
+
+Theorem optimize_com_equiv: forall c,
+  com_equiv c (optimize_com c).
+Proof.
+  intros.
+  induction c; intros.
+  - (* skip *)
+    unfold com_equiv. destruct i; reflexivity.
+  - (* := *)
+    unfold com_equiv.
+    destruct i; try reflexivity. simpl.
+    rewrite optimize_aexp_equiv. reflexivity.
+  - (* ; *)
+    apply com_equiv_seq. split; assumption.
+  - (* if *)
+    simpl. unfold com_equiv.
+    destruct i; try reflexivity. simpl.
+    rewrite <- optimize_bexp_equiv.
+    destruct (beval st b).
+    + admit.
+    + admit.
+  - (* while *)
+    unfold com_equiv.
+    destruct i; try reflexivity. simpl.
+    rewrite <- optimize_bexp_equiv.
+    destruct (beval st b).
+    + admit.
+    + reflexivity.
+  - (* !! *)
+    admit.
+  - (* -> *)
+    unfold com_equiv.
+    destruct i; try reflexivity. simpl.
+    rewrite <- optimize_bexp_equiv.
+    destruct (beval st b).
+    + admit.
+    + admit.
+Admitted.
