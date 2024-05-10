@@ -1,4 +1,4 @@
-min := 53;
+min := 54;
 max := 100;
 
 x := min;
@@ -16,5 +16,5 @@ while i * i <= x do
     ~(j = 0) ->
     i := i + 1
 end;
-~(x <= min) ->
+~(x <= min - 1) ->
 res := x
