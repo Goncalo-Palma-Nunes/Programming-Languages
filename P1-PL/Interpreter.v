@@ -152,6 +152,58 @@ Fixpoint ceval_step (st : state) (c : com) (continuation: list (state * com)) (i
   end.
 *)
 
+(* EXTRA: optimizes a given arithmetic expression *)
+Fixpoint optimize_aexp (a: aexp) : aexp :=
+  match a with
+  | <{a1 + a2}> =>
+    match (optimize_aexp a1, optimize_aexp a2) with
+    | (ANum a1, ANum a2) => ANum (a1 + a2)
+    | (a1, a2) => <{a1 + a2}>
+    end
+  | <{a1 - a2}> =>
+    match (optimize_aexp a1, optimize_aexp a2) with
+    | (ANum a1, ANum a2) => ANum (a1 - a2)
+    | (a1, a2) => <{a1 - a2}>
+    end
+  | <{a1 * a2}> => 
+    match (optimize_aexp a1, optimize_aexp a2) with
+    | (ANum a1, ANum a2) => ANum (a1 * a2)
+    | (a1, a2) => <{a1 * a2}>
+    end
+  | a => a
+  end.
+
+
+(* EXTRA: optimizes a given boolean expression *)
+Fixpoint optimize_bexp (b: bexp) : bexp :=
+  match b with
+  | <{a1 = a2}> =>
+    match (optimize_aexp a1, optimize_aexp a2) with
+    | (ANum a1, ANum a2) => if a1 =? a2 then <{true}> else <{false}>
+    | (a1, a2) => <{a1 = a2}>
+    end
+  | <{a1 <= a2}> =>
+    match (optimize_aexp a1, optimize_aexp a2) with
+    | (ANum a1, ANum a2) => if a1 <=? a2 then <{true}> else <{false}>
+    | (a1, a2) => <{a1 <= a2}>
+    end
+  | <{~ b}> =>
+    match optimize_bexp b with
+    | <{true}> => <{false}>
+    | <{false}> => <{true}>
+    | b => <{~ b}>
+    end
+  | <{b1 && b2}> =>
+    match (optimize_bexp b1, optimize_bexp b2) with
+    | (<{true}>, <{true}>) => <{true}>
+    | (<{true}>, <{false}>) => <{false}>
+    | (<{false}>, <{true}>) => <{false}>
+    | (<{false}>, <{false}>) => <{false}>
+    | (b1, b2) => <{b1 && b2}>
+    end
+  | b => b
+  end.
+
 (* Helper functions that help with running the interpreter *)
 Inductive show_result : Type :=
   | OK (st: list (string*nat))
@@ -351,6 +403,43 @@ Proof.
   unfold ceval_step.
   intros i1 i2 st st' c cont cont' Hle Hceval.
   apply ceval_step_suf_more with (i1:=i1) (i2:=i2) (st:=st) (st':=st') (c:=c) (suf:=None) (cont:=cont) (cont':=cont'); assumption.
+Qed.
+
+(* EXTRA: evaluating an arithmetic expression is equivalent to evaluating its optimized counterpart *)
+Theorem optimize_aexp_equiv: forall st a,
+  aeval st a = aeval st (optimize_aexp a).
+Proof.
+  intros. induction a; try reflexivity;
+  simpl; rewrite IHa1; rewrite IHa2;
+  destruct (optimize_aexp a1); try reflexivity;
+  destruct (optimize_aexp a2); reflexivity.
+Qed.
+
+(* EXTRA: evaluating a boolean expression is equivalent to evaluating its optimized counterpart *)
+Theorem optimize_bexp_equiv: forall st b,
+  beval st b = beval st (optimize_bexp b).
+Proof.
+  intros. induction b; try reflexivity.
+  - (* = *)
+    simpl.
+    rewrite optimize_aexp_equiv.
+    replace (aeval st a2) with (aeval st (optimize_aexp a2)) by (symmetry; rewrite optimize_aexp_equiv; reflexivity).
+    destruct (optimize_aexp a1); try reflexivity.
+    destruct (optimize_aexp a2); try reflexivity.
+    simpl. destruct (n =? n0)%nat; reflexivity.
+  - (* <= *)
+    simpl.
+    rewrite optimize_aexp_equiv.
+    replace (aeval st a2) with (aeval st (optimize_aexp a2)) by (symmetry; rewrite optimize_aexp_equiv; reflexivity).
+    destruct (optimize_aexp a1); try reflexivity.
+    destruct (optimize_aexp a2); try reflexivity.
+    simpl. destruct (n <=? n0)%nat; reflexivity.
+  - (* ~ *)
+    simpl. rewrite IHb.
+    destruct (optimize_bexp b); reflexivity.
+  - (* && *)
+    simpl. rewrite IHb1. rewrite IHb2.
+    destruct (optimize_bexp b1); destruct (optimize_bexp b2); reflexivity.
 Qed.
 
 (* Theorem ceval_opt_equals_ceval: forall st c cont n,
