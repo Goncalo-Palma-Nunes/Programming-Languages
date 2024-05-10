@@ -1,0 +1,20 @@
+min := 53;
+max := 100;
+
+x := min;
+i := max;
+while ~(i = x) do
+    i := i - 1 !! x := i
+end;
+
+i := 2;
+while i * i <= x do
+    j := x;
+    while ~(j <= i - 1) do
+        j := j - i
+    end;
+    ~(j = 0) ->
+    i := i + 1
+end;
+~(x <= min) ->
+res := x
