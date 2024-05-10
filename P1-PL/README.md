@@ -1,12 +1,12 @@
 # Group Identification
 
- - FirstName LastName, IST number, Email
- - FirstName LastName, IST number, Email
- - FirstName LastName, IST number, Email
+ - David Cruz,  89377, daviddcruz@tecnico.ulisboa.pt 
+ - Gonçalo Nunes, 99229, goncalopalmanunes@tecnico.ulisboa.pt
+ - Ricardo Antunes, 99316 , ricardo.g.antunes@tecnico.ulisboa.pt
 
 # Implemented Features
-TODO: Identify what you have done and, in particular, **identify any missing features**.
+All required features mentioned in the project statement and, in particular, in the table on the **Assessment** section of the project statement have been implemented.
 
 # Extras
-TODO: Identify and describe additional work that you have done,
-      so that it can be considered for extra credits.
+- Optimized versions of aeval and beval were created in Imp.v and proven to have the same results as the unoptimized versions.
+- A sketch of a possible optimized step-index evaluator ceval_step_opt was implemented, but not proved sound. Most of it is commented out, because the initial idea was to add each optimization incrementally, while adjusting the proof. 
