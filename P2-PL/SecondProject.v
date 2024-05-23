@@ -163,6 +163,12 @@ Inductive ceval : com -> state -> result -> Prop :=
       beval st b = true ->
       st =[ c ]=> RError ->
       st =[ while b do c end ]=> RError
+  | E_NonDetChoice1 : forall st r c1 c2,
+      st  =[ c1 ]=> r ->
+      st  =[ c1 !! c2 ]=> r
+  | E_NonDetChoice2 : forall st r c1 c2,
+      st  =[ c2 ]=> r ->
+      st  =[ c1 !! c2 ]=> r
   (* TODO *)
 
 where "st '=[' c ']=>' r" := (ceval c st r).
