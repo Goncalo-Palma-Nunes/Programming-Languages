@@ -279,11 +279,42 @@ Notation "{{ P }}  c  {{ Q }}" :=
 (*            also works for [assume].                                *)
 (* ################################################################## *)
 
+Theorem hoare_pre_false : forall (P Q : Assertion) c,
+  (forall st, ~ (P st)) ->
+  {{P}} c {{Q}}.
+Proof.
+  intros P Q c H st r Heval HP.
+  exfalso. 
+  apply H in HP. 
+  assumption.
+
+  (* NOTE : this theorem isn't part of the project, it's here
+  in case it becomes useful to solve some other proof *)
+Qed.
+
+Theorem hoare_post_true : forall (P Q : Assertion) c,
+  (forall st, Q st) ->
+  {{P}} c {{Q}}.
+Proof.
+  intros P Q c H st r Heval HP.
+  exists st. 
+  split.
+  - admit. 
+  - apply H.
+
+  (* NOTE : this theorem isn't part of the project, it's here
+  in case it becomes useful to solve some other proof *)
+Admitted.
+
+
 Theorem assume_false: forall P Q b,
        (forall st, beval st b = false) ->
        ({{P}} assume b {{Q}}).
 Proof.
-  (* TODO *)
+  intros P Q b H st r Heval HP.
+  inversion Heval; subst.
+  rewrite H in H1.
+  discriminate H1.
 Qed.
 
 Theorem assert_implies_assume : forall P b Q,
