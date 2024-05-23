@@ -35,11 +35,11 @@
 
 Set Warnings "-notation-overridden,-parsing,-require-in-module,-fragile".
 
-From SecondProject Require Import Maps.
+From PLF Require Import Maps.
 From Coq Require Import Arith.PeanoNat. Import Nat.
-From SecondProject Require Import Imp.
-From SecondProject Require Import Hoare.
-From SecondProject Require Import Smallstep.
+From PLF Require Import Imp.
+From PLF Require Import Hoare.
+From PLF Require Import Smallstep.
 
 Module SecondProject.
 
@@ -183,6 +183,74 @@ Inductive ceval : com -> state -> result -> Prop :=
 
 where "st '=[' c ']=>' r" := (ceval c st r).
 
+(* Example of a program assigning a value of 1 to variable X *)
+Example example_asgn: 
+  empty_st =[ X := 1 ]=> RNormal (X !-> 1).
+Proof.
+  apply E_Asgn with (n := 1). reflexivity.
+Qed.
+
+(* Example of a program with non deterministic choice between two assignments *)
+Example example_non_det_choice: 
+  empty_st =[ X := 1 !! X := 2 ]=> RNormal (X !-> 1).
+Proof.
+  apply E_NonDetChoice1. 
+  apply E_Asgn with (n := 1). 
+  reflexivity.
+Qed.
+
+Example example_non_det_choice2: 
+  empty_st =[ X := 1 !! X := 2 ]=> RNormal (X !-> 2).
+Proof.
+  apply E_NonDetChoice2. 
+  apply E_Asgn with (n := 2). 
+  reflexivity.
+Qed.
+
+(* Example proving that the program X := 1 !! X := 2 starting in the 
+empty state can end with either X equal to 1 or to 2 *)
+Example example_non_det_choice3: 
+  exists st',
+  empty_st =[ X := 1 !! X := 2 ]=> RNormal st' /\ (st' X = 1 \/ st' X = 2).
+Proof.
+  exists (X !-> 1). 
+  split.
+  - apply E_NonDetChoice1. 
+    apply E_Asgn with (n := 1). 
+    reflexivity.
+  - left. 
+    reflexivity.
+Qed.
+
+Example example_assert_success: 
+  empty_st =[ X := 0 ; assert (X = 0) ]=> RNormal (X !-> 0). 
+Proof.
+  apply E_SeqNormal with (st' := (X !-> 0)).
+  - apply E_Asgn with (n := 0). 
+    reflexivity.
+  - apply E_AssertTrue. 
+    reflexivity.
+Qed.
+
+Example example_assert_failure: 
+  empty_st =[ X := 0 ; assert (X = 1) ]=> RError.
+Proof.
+  apply E_SeqNormal with (st' := (X !-> 0)).
+  - apply E_Asgn with (n := 0). 
+    reflexivity.
+  - apply E_AssertFalse. 
+    reflexivity.
+Qed.
+
+Example example_assume_success: 
+  empty_st =[ X := 0 ; assume (X = 0) ]=> RNormal (X !-> 0).
+Proof.
+  apply E_SeqNormal with (st' := (X !-> 0)).
+  - apply E_Asgn with (n := 0). 
+    reflexivity.
+  - apply E_AssumeTrue. 
+    reflexivity.
+Qed.
 
 (** We redefine hoare triples: Now, [{{P}} c {{Q}}] means that,
     whenever [c] is started in a state satisfying [P], and terminates
