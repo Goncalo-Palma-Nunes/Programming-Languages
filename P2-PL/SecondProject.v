@@ -321,7 +321,14 @@ Theorem assert_implies_assume : forall P b Q,
      ({{P}} assert b {{Q}})
   -> ({{P}} assume b {{Q}}).
 Proof.
-  (* TODO *)
+  intros P b Q H st r Heval HP.
+  inversion Heval; subst.
+  unfold hoare_triple in H.
+  assert (st =[ assert b ]=> RNormal st).
+  - apply E_AssertTrue. apply H1.
+  - apply H in H0.
+    + eapply H0.
+    + apply HP.
 Qed.
 
 
