@@ -12,3 +12,4 @@
 interpreter
 imp.ml
 .lia.cache
+*.zip
