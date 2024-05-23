@@ -169,7 +169,17 @@ Inductive ceval : com -> state -> result -> Prop :=
   | E_NonDetChoice2 : forall st r c1 c2,
       st  =[ c2 ]=> r ->
       st  =[ c1 !! c2 ]=> r
-  (* TODO *)
+  | E_AssertTrue : forall st b,
+      beval st b = true ->
+      st =[ assert b ]=> RNormal st
+  | E_AssertFalse : forall st b,
+      beval st b = false ->
+      st =[ assert b ]=> RError
+  | E_AssumeTrue : forall st b,
+      beval st b = true ->
+      st =[ assume b ]=> RNormal st
+  (* TODO - do we need a case for AssumeFalse? I don't think so,
+  since the program is supposed to get stuck *)
 
 where "st '=[' c ']=>' r" := (ceval c st r).
 
