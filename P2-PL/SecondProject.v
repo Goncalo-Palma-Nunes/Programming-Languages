@@ -35,11 +35,11 @@
 
 Set Warnings "-notation-overridden,-parsing,-require-in-module,-fragile".
 
-From PLF Require Import Maps.
+From SecondProject Require Import Maps.
 From Coq Require Import Arith.PeanoNat. Import Nat.
-From PLF Require Import Imp.
-From PLF Require Import Hoare.
-From PLF Require Import Smallstep.
+From SecondProject Require Import Imp.
+From SecondProject Require Import Hoare.
+From SecondProject Require Import Smallstep.
 
 Module SecondProject.
 
@@ -471,9 +471,20 @@ Qed.
 
 
 Theorem hoare_assert: forall P (b: bexp),
-  (*TODO: Hoare proof rule for [assert b] *) 
+  (*TODO: Hoare proof rule for [assert b]
+  NOTE: Theorem 'statement' was added by Ricardo, not the professors *)
+  {{ P /\ b }} assert b {{ P }}.
 Proof.
-Admitted.
+  intros P b st r Heval HP.
+  inversion Heval; subst; exists st.
+  - split. 
+    + reflexivity.
+    + apply HP.
+  - inversion HP as [_ HP'].
+    inversion HP' as [HP''].
+    rewrite H0 in HP''.
+    discriminate HP''.
+Qed.
 
 (* ================================================================= *)
 (* EXERCISE 3.2: State and prove [hoare_assume]                      *)
@@ -488,7 +499,7 @@ Proof.
   intros P b st r Heval HP.
   inversion Heval; subst.
   exists st. 
-  split. 
+  split.
     + reflexivity. 
     + apply HP.
 Qed.
