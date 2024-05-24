@@ -14,3 +14,5 @@ imp.ml
 .lia.cache
 *.zip
 plf
+Makefile
+Makefile.conf
