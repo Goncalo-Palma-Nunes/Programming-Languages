@@ -471,12 +471,8 @@ Qed.
 
 
 Theorem hoare_assert: forall P (b: bexp),
-  (*TODO: Hoare proof rule for [assert b] 
-    NOTE: Theorem 'statement' was added by Gonçalo, not the professors *)
-  {{ P /\ b }} assert b {{ P }}.
+  (*TODO: Hoare proof rule for [assert b] *) 
 Proof.
-  intros P b st r Heval HP.
-  inversion Heval; subst.
 Admitted.
 
 (* ================================================================= *)
@@ -602,6 +598,28 @@ Notation " t '/' st '-->*' t' '/' st' " :=
    (at level 40, st at level 39, t' at level 39).
 
 
+Definition skip_program : com :=
+  <{ skip }>.
+
+Example skip_program_multistep:
+  skip_program / RNormal empty_st -->* skip_program / RNormal empty_st.
+Proof.
+  eapply multi_refl.
+Qed.
+
+Definition prog_simpl_true_assert : com :=
+  (* Sets X to 1 and asserts if X is equal to 1 *)
+  <{ X := 1; assert (X = 1) }>.
+
+Example prog_simpl_true_assert_example:
+  exists st',
+       prog_simpl_true_assert / RNormal empty_st -->* <{ skip }> / RNormal st'
+    /\ st' X = 1.
+Proof.
+  (* Isn't part of the evaluation criteria *)
+Admitted.
+
+
 (* ################################################################# *)
 (* EXERCISE 5 (1 point): Show that the program [prog1] can           *)
 (*            successfully terminate in a state where [X=2].         *)
@@ -665,6 +683,9 @@ Lemma one_step_aeval_a: forall st a a',
   aeval st a = aeval st a'.
 Proof.
   (* TODO (Hint: you can prove this by induction on a) *)
+  intros st a a' H.
+  induction H; simpl; try reflexivity;
+  try rewrite IHastep; try reflexivity.
 Qed.
 
 
