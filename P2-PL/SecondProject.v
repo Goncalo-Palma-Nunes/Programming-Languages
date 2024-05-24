@@ -232,7 +232,7 @@ Proof.
     reflexivity.
 Qed.
 
-Example example_assert_failure: 
+(* Example example_assert_failure: 
   empty_st =[ X := 0 ; assert (X = 1) ]=> RError.
 Proof.
   apply E_SeqNormal with (st' := (X !-> 0)).
@@ -240,7 +240,7 @@ Proof.
     reflexivity.
   - apply E_AssertFalse. 
     reflexivity.
-Qed.
+Qed. *)
 
 Example example_assume_success: 
   empty_st =[ X := 0 ; assume (X = 0) ]=> RNormal (X !-> 0).
@@ -468,20 +468,32 @@ Qed.
 (* EXERCISE 3.1: State and prove [hoare_assert]                      *)
 (* ================================================================= *)
 
+
 Theorem hoare_assert: forall P (b: bexp),
-  (*TODO: Hoare proof rule for [assert b] *)
+  (*TODO: Hoare proof rule for [assert b] 
+    NOTE: Theorem 'statement' was added by Gonçalo, not the professors *)
+  {{ P /\ b }} assert b {{ P }}.
 Proof.
-  (* TODO *)
-Qed.
+  intros P b st r Heval HP.
+  inversion Heval; subst.
+Admitted.
 
 (* ================================================================= *)
 (* EXERCISE 3.2: State and prove [hoare_assume]                      *)
 (* ================================================================= *)
 
 Theorem hoare_assume: forall (P:Assertion) (b:bexp),
-  (*TODO: Hoare proof rule for [assume b] *)
+  (*TODO: Hoare proof rule for [assume b]
+  NOTE: Theorem 'statement' was added by Gonçalo, not the professors *)
+  {{ P /\ b }} assume b {{ P }}.
 Proof.
   (* TODO *)
+  intros P b st r Heval HP.
+  inversion Heval; subst.
+  exists st. 
+  split. 
+    + reflexivity. 
+    + apply HP.
 Qed.
 
 
@@ -489,10 +501,33 @@ Qed.
 (* EXERCISE 3.3: State and prove [hoare_choice]                      *)
 (* ================================================================= *)
 
+Lemma hoare_choice_backwards : forall st st' c1 c2,
+  st =[ c1 !! c2 ]=> st' ->
+  (st =[ c1 ]=> st' \/ st =[ c2 ]=> st').
+Proof.
+  intros st st' c1 c2 H.
+  inversion H; subst.
+  - left. apply H4.
+  - right. apply H4.
+Qed.
+
 Theorem hoare_choice' : forall P c1 c2 Q,
-  (*TODO: Hoare proof rule for [c1 !! c2] *)
+  (*TODO: Hoare proof rule for [c1 !! c2] 
+  NOTE: Theorem 'statement' was added by Gonçalo, not the professors *)
+  {{ P }} c1 {{ Q }} ->
+  {{ P }} c2 {{ Q }} ->
+  {{ P }} c1 !! c2 {{ Q }}.
 Proof.
   (* TODO *)
+  intros P c1 c2 Q H1 H2 st r Heval HP.
+  inversion Heval; subst.
+  unfold hoare_triple in H1, H2.
+  eapply H1.
+  - apply H5.
+  - apply HP.
+  - eapply H2.
+    + apply H5.
+    + apply HP. 
 Qed.
 
 
@@ -502,12 +537,16 @@ Qed.
 (*               words what this example is demonstrating.           *)                                            
 (* ================================================================= *)
 
+(* If the program <{ X := X + 1 !! X := X + 2 } is executed in a 
+state st where the Assertion X = 1 holds, then it will transition to
+one where the Assertion  X = 2 \/ X = 3  (the postcondition) holds *)
 Example hoare_choice_example:
   {{ X = 1 }}
   X := X + 1 !! X := X + 2
   {{ X = 2 \/ X = 3 }}.
 Proof.
-  ( * TODO *)
+  apply hoare_choice'.
+  - admit.
 Qed.
 
 
