@@ -163,6 +163,7 @@ Inductive ceval : com -> state -> result -> Prop :=
       beval st b = true ->
       st =[ c ]=> RError ->
       st =[ while b do c end ]=> RError
+  (* TODO *)
   | E_NonDetChoice1 : forall st r c1 c2,
       st  =[ c1 ]=> r ->
       st  =[ c1 !! c2 ]=> r
@@ -583,8 +584,13 @@ Inductive cstep : (com * result)  -> (com * result) -> Prop :=
   | CS_While : forall st b c1,
           <{while b do c1 end}> / st 
       --> <{ if b then (c1; while b do c1 end) else skip end }> / st
-
   (* TODO *)
+  | CS_AssertTrue : forall st,
+      <{ assert true }> / RNormal st -->
+      <{ skip }> / RNormal st
+  | CS_AssertFalse : forall st,
+      <{ assert false }> / st -->
+      <{ skip }> / RError
   
 
   where " t '/' st '-->' t' '/' st' " := (cstep (t,st) (t',st')).
