@@ -616,6 +616,10 @@ Inductive cstep : (com * result)  -> (com * result) -> Prop :=
   | CS_AssumeTrue : forall st,
       <{ assume true }> / RNormal st -->
       <{ skip }> / RNormal st
+  | CS_NonDetChoice1 : forall st c1 c2,
+      <{ c1 !! c2 }> / st --> c1 / st
+  | CS_NonDetChoice2 : forall st c1 c2,
+      <{ c1 !! c2 }> / st --> c2 / st
 
   where " t '/' st '-->' t' '/' st' " := (cstep (t,st) (t',st')).
 
