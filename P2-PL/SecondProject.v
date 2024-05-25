@@ -979,7 +979,9 @@ Fixpoint post (d : dcom) : Assertion :=
   | DCWhile _ _ _ Q         => Q
   | DCPre _ d               => post d
   | DCPost _ Q              => Q
-  (* TODO *)
+  | DCAssert _ Q            => Q
+  | DCAssume _ Q            => Q
+  | DCNonDetChoice _ _ Q    => Q
   end.
 
 Definition post_dec (dec : decorated) : Assertion :=
