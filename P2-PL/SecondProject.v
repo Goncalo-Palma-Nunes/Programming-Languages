@@ -519,23 +519,29 @@ Proof.
   - right. apply H4.
 Qed.
 
-Theorem hoare_choice' : forall P c1 c2 Q,
+Theorem hoare_choice' : forall P c1 c2 Q1 Q2 Q,
   (*TODO: Hoare proof rule for [c1 !! c2] 
   NOTE: Theorem 'statement' was added by Gonçalo, not the professors *)
-  {{ P }} c1 {{ Q }} ->
-  {{ P }} c2 {{ Q }} ->
+  {{ P }} c1 {{ Q1 }} ->
+  {{ P }} c2 {{ Q2 }} ->
+  Q1 ->> Q ->
+  Q2 ->> Q ->
   {{ P }} c1 !! c2 {{ Q }}.
 Proof.
-  (* TODO *)
-  intros P c1 c2 Q H1 H2 st r Heval HP.
-  inversion Heval; subst.
+  intros P c1 c2 Q1 Q2 Q H1 H2 H3 H4 st r Heval HP.
   unfold hoare_triple in H1, H2.
-  eapply H1.
-  - apply H5.
-  - apply HP.
-  - eapply H2.
-    + apply H5.
-    + apply HP. 
+  inversion Heval; subst.
+  - specialize (H1 st r H7 HP).
+    destruct H1 as [st' [H8 H9]].
+    unfold assert_implies in H3.
+    exists st'.
+    split; try apply H3; assumption.
+  - specialize (H2 st r H7 HP).
+    destruct H2 as [st' [H8 H9]].
+    unfold assert_implies in H4.
+    exists st'.
+    split; try apply H4; assumption.
+  (*TODO: simplify this*)
 Qed.
 
 
@@ -553,18 +559,19 @@ Example hoare_choice_example:
   X := X + 1 !! X := X + 2
   {{ X = 2 \/ X = 3 }}.
 Proof.
-  apply hoare_choice'.
+  apply hoare_choice' with (Q1 := (X = 2)%assertion) (Q2 := (X = 3)%assertion).
   - eapply hoare_consequence_pre.
     + apply hoare_asgn.
-    + unfold "->>". intros st H.
-      left. simpl in *. rewrite H.
+    + unfold assn_sub. intros st H.
+      simpl in *. rewrite H.
       reflexivity.
   - eapply hoare_consequence_pre.
     + apply hoare_asgn.
-    + unfold "->>". intros st H.
-      right. simpl in *. rewrite H.
+    + unfold assn_sub. intros st H.
+      simpl in *. rewrite H.
       reflexivity.
-  (*TODO: simplify this? too much repetition*)
+  - intros st H. left. rewrite H. reflexivity.
+  - intros st H. right. rewrite H. reflexivity.
 Qed.
 
 (* ################################################################# *)
