@@ -944,7 +944,9 @@ Fixpoint extract (d : dcom) : com :=
   | DCWhile b _ d _    => CWhile b (extract d)
   | DCPre _ d          => extract d
   | DCPost d _         => extract d
-  (* TODO *)
+  | DCAssert b         => CAssert b
+  | DCAssume b         => CAssume b
+  | DCNonDetChoice d1 d2 _ => CNonDetChoice (extract d1) (extract d2)
   end.
 
 Definition extract_dec (dec : decorated) : com :=
