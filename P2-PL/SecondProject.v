@@ -1150,7 +1150,8 @@ Fixpoint verification_conditions (P : Assertion) (d : dcom) : Prop :=
       verification_conditions P d
       /\ (post d ->> Q)
   | DCAssert b Q =>
-      (P ->> Q) (*TODO: I think this doesn't depend on b? since asserts are allowed to fail*)
+      (P ->> b)%assertion
+      /\ ((P /\ b) ->> Q)%assertion
   | DCAssume b Q =>
       ((P /\ b) ->> Q)%assertion
   | DCNonDetChoice d1 d2 Q =>
@@ -1204,6 +1205,16 @@ Proof.
   - (* Post *)
     destruct H as [Hd HQ].
     eapply hoare_consequence_post; eauto.
+  - (* Assert *)
+    destruct H as [Hb HQ].
+    eapply hoare_consequence_pre.
+      + apply hoare_assert.
+      + unfold assert_implies. intros st.
+        simpl in *.
+        specialize (Hb st).
+        specialize (HQ st).
+        simpl in *.
+        split; try apply HQ; try split; try apply Hb; assumption.
   (* TODO *)
 Qed.
 
