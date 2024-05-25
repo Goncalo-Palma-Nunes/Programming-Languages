@@ -554,9 +554,18 @@ Example hoare_choice_example:
   {{ X = 2 \/ X = 3 }}.
 Proof.
   apply hoare_choice'.
-  - admit.
+  - eapply hoare_consequence_pre.
+    + apply hoare_asgn.
+    + unfold "->>". intros st H.
+      left. simpl in *. rewrite H.
+      reflexivity.
+  - eapply hoare_consequence_pre.
+    + apply hoare_asgn.
+    + unfold "->>". intros st H.
+      right. simpl in *. rewrite H.
+      reflexivity.
+  (*TODO: simplify this? too much repetition*)
 Qed.
-
 
 (* ################################################################# *)
 (* EXERCISE 4 (1.5 points): Define a relational evaluation (small-step *)
