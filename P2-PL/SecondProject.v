@@ -912,7 +912,7 @@ Notation "'assert' b {{ Q }}"
 Notation "'assume' b {{ Q }}"
       := (DCAssume b Q)
       (in custom com at level 0, b constr) : dcom_scope.
-Notation "d1 !! d2 {{ Q }}"
+Notation "d1 '!!' d2 {{ Q }}"
       := (DCNonDetChoice d1 d2 Q)
       (in custom com at level 90, right associativity) : dcom_scope.
 
@@ -1517,6 +1517,8 @@ Proof.
   - replace (x+2) with (S ( S x)) in *; simpl in *; try lia.
 Qed.
 
+Definition same_parity (X Y:Aexp) : Assertion :=
+  (ap parity X = ap parity Y).
 
 Definition parity_dec_nondet (m:nat) : decorated :=
 (* TODO: write a decorated version of the program shown above. The pre and post-conditions
@@ -1525,17 +1527,51 @@ not typecheck until you decorate it correctly. *)
 <{
   {{ X = m }}
     while 2 <= X do
-      X := X - 2
-      !! 
-      X := X + 2
+      {{ same_parity X m /\ 2 <= X }} ->>
+      {{ same_parity X m /\ 2 <= X }}
+        X := X - 2
+        {{ same_parity (X + 2) m /\ 2 <= X + 2 }} ->>
+        {{ same_parity X m /\ 0 <= X }}
+        !!
+        X := X + 2
+        {{ same_parity (X - 2) m /\ 2 <= X - 2 }} ->>
+        {{ same_parity X m /\ 4 <= X }}
+      {{ same_parity X m }}
     end
+  {{ same_parity X m /\ ~(2 <= X) }} ->> (*TODO: i added this line, does it count as modifying the post-condition?*)
   {{ X = parity m }} }>.
 
 
 Theorem parity_outer_triple_valid_nondet : forall m,
   outer_triple_valid (parity_dec_nondet m).
-Proof. 
-  (* TODO *)
+Proof.
+  verify; unfold same_parity, ap in *; simpl.
+  - reflexivity.
+  - destruct (st X); try lia.
+    destruct n; lia.
+  - destruct (st X); try lia.
+    destruct n; lia.
+  - unfold t_update.
+    destruct (st X); try lia.
+    destruct n; try lia.
+    simpl in *.
+    rewrite parity_plus_2.
+    rewrite sub_0_r.
+    assumption.
+  - rewrite <- parity_plus_2.
+    assumption.
+  - unfold t_update.
+    simpl.
+    rewrite add_sub.
+    assumption.
+  - destruct (st X); try lia.
+    destruct n; try lia.
+    simpl in *.
+    rewrite sub_0_r in H.
+    assumption.
+  - destruct (st X); try assumption.
+    destruct n; try assumption.
+    lia.
 Qed.
 
 
