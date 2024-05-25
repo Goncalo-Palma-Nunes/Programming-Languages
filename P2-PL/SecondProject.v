@@ -1153,7 +1153,7 @@ Fixpoint verification_conditions (P : Assertion) (d : dcom) : Prop :=
       (P ->> b)%assertion
       /\ ((P /\ b) ->> Q)%assertion
   | DCAssume b Q =>
-      ((P /\ b) ->> Q)%assertion
+      (P ->> (Q /\ b))%assertion
   | DCNonDetChoice d1 d2 Q =>
       verification_conditions P d1
       /\ verification_conditions P d2
@@ -1210,12 +1210,14 @@ Proof.
     eapply hoare_consequence_pre.
       + apply hoare_assert.
       + unfold assert_implies. intros st.
-        simpl in *.
         specialize (Hb st).
         specialize (HQ st).
         simpl in *.
         split; try apply HQ; try split; try apply Hb; assumption.
-  (* TODO *)
+  - (* Assume *)
+    eapply hoare_consequence_pre.
+      + apply hoare_assume.
+      + simpl. assumption.
 Qed.
 
 
