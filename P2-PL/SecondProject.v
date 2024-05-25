@@ -610,7 +610,12 @@ Inductive cstep : (com * result)  -> (com * result) -> Prop :=
   | CS_AssertFalse : forall st,
       <{ assert false }> / st -->
       <{ skip }> / RError
-  
+  | CS_AssumeStep : forall st b b',
+      b / st -->b b' ->
+      <{ assume b }> / RNormal st --> <{ assume b' }> / RNormal st
+  | CS_AssumeTrue : forall st,
+      <{ assume true }> / RNormal st -->
+      <{ skip }> / RNormal st
 
   where " t '/' st '-->' t' '/' st' " := (cstep (t,st) (t',st')).
 
