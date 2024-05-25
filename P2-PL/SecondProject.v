@@ -601,6 +601,9 @@ Inductive cstep : (com * result)  -> (com * result) -> Prop :=
           <{while b do c1 end}> / st 
       --> <{ if b then (c1; while b do c1 end) else skip end }> / st
   (* TODO *)
+  | CS_AssertStep : forall st b b',
+      b / st -->b b' ->
+      <{ assert b }> / RNormal st --> <{ assert b' }> / RNormal st
   | CS_AssertTrue : forall st,
       <{ assert true }> / RNormal st -->
       <{ skip }> / RNormal st
