@@ -1225,6 +1225,16 @@ Proof.
     eapply hoare_consequence_pre.
       + apply hoare_assume.
       + simpl. assumption.
+  - (* NonDetChoice *)
+    destruct H as [H1 [H2 [HQ1 HQ2] ] ].
+    eapply hoare_consequence.
+      + eapply hoare_choice'.
+        * apply IHd1. apply H1.
+        * apply IHd2. apply H2.
+        * apply HQ1.
+        * apply HQ2.
+      + eauto.
+      + eauto.
 Qed.
 
 
