@@ -849,10 +849,10 @@ Inductive dcom : Type :=
   (* ->> {{ P }} d *)
 | DCPost (d : dcom) (Q : Assertion)
   (* d ->> {{ Q }} *)
-| DCAssert (b : bexp)
-  (* assert b *) 
-| DCAssume (b : bexp)
-  (* assume b *)
+| DCAssert (b : bexp) (Q : Assertion)
+  (* assert b {{ Q }} *)
+| DCAssume (b : bexp) (Q : Assertion)
+  (* assume b {{ Q }} *)
 | DCNonDetChoice (d1 d2 : dcom) (Q : Assertion)
   (* d1 !! d2 {{ Q }} *)
 .
@@ -899,11 +899,11 @@ Notation "{{ P }} d"
 
 
 (* TODO: notation for the three new constructs *)
-Notation "'assert' {{ b }}"
-      := (DCAssert b)
+Notation "'assert' b {{ Q }}"
+      := (DCAssert b Q)
       (in custom com at level 0, b constr) : dcom_scope.
-Notation "'assume' {{ b }}"
-      := (DCAssume b)
+Notation "'assume' b {{ Q }}"
+      := (DCAssume b Q)
       (in custom com at level 0, b constr) : dcom_scope.
 Notation "d1 !! d2 {{ Q }}"
       := (DCNonDetChoice d1 d2 Q)
@@ -944,8 +944,8 @@ Fixpoint extract (d : dcom) : com :=
   | DCWhile b _ d _    => CWhile b (extract d)
   | DCPre _ d          => extract d
   | DCPost d _         => extract d
-  | DCAssert b         => CAssert b
-  | DCAssume b         => CAssume b
+  | DCAssert b _       => CAssert b
+  | DCAssume b _       => CAssume b
   | DCNonDetChoice d1 d2 _ => CNonDetChoice (extract d1) (extract d2)
   end.
 
