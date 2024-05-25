@@ -1440,25 +1440,25 @@ Proof. verify. Qed.
 (* TODO: fill in the assertions *)
 Definition sqrt_dec (m:nat) : decorated :=
   <{
-    {{ FILL_IN_HERE }} ->>
-    {{ FILL_IN_HERE }}
+    {{ True }} ->>
+    {{ 0*0 <= X }}
       Z := 0
-                    {{ FILL_IN_HERE }};
+                    {{ Z*Z <= X }};
       while ((Z+1)*(Z+1) <= X) do
-                    {{ FILL_IN_HERE  }} ->>
-                    {{ FILL_IN_HERE }}
+                    {{ Z*Z <= X /\ (Z+1)*(Z+1) <= X }} ->>
+                    {{ (Z+1)*(Z+1) <= X }}
         Z := Z + 1
-                    {{ FILL_IN_HERE }}
+                    {{ Z*Z <= X }}
       end
-    {{ FILL_IN_HERE }} ->>
-    {{ FILL_IN_HERE }}
+    {{ Z*Z <= X /\ ~((Z+1)*(Z+1) <= X) }} ->>
+    {{ Z*Z <= X /\ X < (Z+1)*(Z+1) }}
   }>.
 
 Theorem sqrt_correct : forall m,
   outer_triple_valid (sqrt_dec m).
-Proof. (* TODO *) Admitted.
-
-
+Proof.
+  verify.
+Qed.
 
 (* ################################################################# *)
 (* EXERCISE 12 (3 points):  Consider the following triple:        
