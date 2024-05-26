@@ -1542,19 +1542,22 @@ not typecheck until you decorate it correctly. *)
   {{ X = parity m }} }>.
 
 
+Ltac verify_parity_auto st X n :=
+  try destruct (st X);
+  try (lia || assumption);
+  try destruct n;
+  try (lia || assumption);
+  try simpl in *.
+
 Theorem parity_outer_triple_valid_nondet : forall m,
   outer_triple_valid (parity_dec_nondet m).
 Proof.
   verify; unfold same_parity, ap in *; simpl.
   - reflexivity.
-  - destruct (st X); try lia.
-    destruct n; lia.
-  - destruct (st X); try lia.
-    destruct n; lia.
+  - verify_parity_auto st X n.
+  - verify_parity_auto st X n.
   - unfold t_update.
-    destruct (st X); try lia.
-    destruct n; try lia.
-    simpl in *.
+    verify_parity_auto st X n.
     rewrite parity_plus_2.
     rewrite sub_0_r.
     assumption.
@@ -1564,14 +1567,10 @@ Proof.
     simpl.
     rewrite add_sub.
     assumption.
-  - destruct (st X); try lia.
-    destruct n; try lia.
-    simpl in *.
+  - verify_parity_auto st X n.
     rewrite sub_0_r in H.
     assumption.
-  - destruct (st X); try assumption.
-    destruct n; try assumption.
-    lia.
+  - verify_parity_auto st X n.
 Qed.
 
 
