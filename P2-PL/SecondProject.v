@@ -519,9 +519,16 @@ Proof.
   - right. apply H4.
 Qed.
 
-Theorem hoare_choice' : forall P c1 c2 Q1 Q2 Q,
+Ltac hoare_choice_aux H1 st r H2 HP H4 :=
+  specialize (H1 st r H2 HP);
+  destruct H1 as [st' [H8 H9]];
+  unfold assert_implies in H4;
+  exists st';
+  split; try apply H4; assumption.
+
+Theorem hoare_choice'' : forall P c1 c2 Q1 Q2 Q,
   (*TODO: Hoare proof rule for [c1 !! c2] 
-  NOTE: Theorem 'statement' was added by Gonçalo, not the professors *)
+  NOTE: Theorem 'statement' was added by Ricardo, not the professors *)
   {{ P }} c1 {{ Q1 }} ->
   {{ P }} c2 {{ Q2 }} ->
   Q1 ->> Q ->
@@ -531,18 +538,17 @@ Proof.
   intros P c1 c2 Q1 Q2 Q H1 H2 H3 H4 st r Heval HP.
   unfold hoare_triple in H1, H2.
   inversion Heval; subst.
-  - specialize (H1 st r H7 HP).
-    destruct H1 as [st' [H8 H9]].
-    unfold assert_implies in H3.
-    exists st'.
-    split; try apply H3; assumption.
-  - specialize (H2 st r H7 HP).
-    destruct H2 as [st' [H8 H9]].
-    unfold assert_implies in H4.
-    exists st'.
-    split; try apply H4; assumption.
-  (*TODO: simplify this*)
+  - hoare_choice_aux H1 st r H7 HP H3.
+  - hoare_choice_aux H2 st r H7 HP H4.
 Qed.
+
+Theorem hoare_choice' : forall P c1 c2 Q,
+  (*TODO: Hoare proof rule for [c1 !! c2] 
+  NOTE: Theorem 'statement' was added by Gonçalo, not the professors *)
+  {{ P }} c1 !! c2 {{ Q }}.
+Proof.
+  (* TODO *)
+Admitted.
 
 
 (* ================================================================= *)
