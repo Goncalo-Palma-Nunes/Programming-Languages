@@ -602,6 +602,27 @@ Proof.
       reflexivity.
 Qed.
 
+(* Alternative proof using hoare_choice'' instead of hoare_choice' *)
+Example hoare_choice_example':
+  {{ X = 1 }}
+  X := X + 1 !! X := X + 2
+  {{ X = 2 \/ X = 3 }}.
+Proof.
+  apply hoare_choice'' with (Q1 := (X = 2)%assertion) (Q2 := (X = 3)%assertion).
+  - eapply hoare_consequence_pre.
+    + apply hoare_asgn.
+    + unfold assn_sub. intros st H.
+      simpl in *. rewrite H.
+      reflexivity.
+  - eapply hoare_consequence_pre.
+    + apply hoare_asgn.
+    + unfold assn_sub. intros st H.
+      simpl in *. rewrite H.
+      reflexivity.
+  - intros st H. left. rewrite H. reflexivity.
+  - intros st H. right. rewrite H. reflexivity.
+Qed.
+
 (* ################################################################# *)
 (* EXERCISE 4 (1.5 points): Define a relational evaluation (small-step *)
 (*                        semantics). Some rules are given.          *)
