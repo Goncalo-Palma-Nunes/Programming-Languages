@@ -660,19 +660,6 @@ Proof.
   eapply multi_refl.
 Qed.
 
-Definition prog_simpl_true_assert : com :=
-  (* Sets X to 1 and asserts if X is equal to 1 *)
-  <{ X := 1; assert (X = 1) }>.
-
-Example prog_simpl_true_assert_example:
-  exists st',
-       prog_simpl_true_assert / RNormal empty_st -->* <{ skip }> / RNormal st'
-    /\ st' X = 1.
-Proof.
-  (* Isn't part of the evaluation criteria *)
-Admitted.
-
-
 (* ################################################################# *)
 (* EXERCISE 5 (1 point): Show that the program [prog1] can           *)
 (*            successfully terminate in a state where [X=2].         *)
