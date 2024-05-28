@@ -571,13 +571,15 @@ Proof.
   intros P c1 c2 Q;
   eexists. eexists.
   split.
-  - intros H. destruct H as [H1 H2].
+  - (* Prove implication from left to right *)
+    intros H. destruct H as [H1 H2].
     repeat split.
     + apply H1.
     + apply H2.
     + unfold assert_implies. intros. assumption.
     + unfold assert_implies. intros. assumption.
-  - intros H. destruct H as [H1 [H2 [H3 H4]]].
+  - (* Prove implication from right to left *)
+    intros H. destruct H as [H1 [H2 [H3 H4]]].
     split.
     + apply H1.
     + apply H2.
