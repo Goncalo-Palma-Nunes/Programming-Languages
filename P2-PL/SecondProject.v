@@ -556,6 +556,33 @@ Proof.
   assumption.
 Qed.
 
+(* Both statements for hoare_choice are equivalent. If we have the conditions
+to use one of them, we have the conditions necessary to apply the other *)
+Theorem hoare_choice_equiv : forall P c1 c2 Q,
+  (exists Q1 Q2,
+  ({{ P }} c1 {{ Q }} /\ {{ P }} c2 {{ Q }})
+  <->
+    {{ P }} c1 {{ Q1 }} /\
+    {{ P }} c2 {{ Q2 }} /\
+    (Q1 ->> Q) /\
+    (Q2 ->> Q)
+  ).
+Proof.
+  intros P c1 c2 Q;
+  eexists. eexists.
+  split.
+  - intros H. destruct H as [H1 H2].
+    repeat split.
+    + apply H1.
+    + apply H2.
+    + unfold assert_implies. intros. assumption.
+    + unfold assert_implies. intros. assumption.
+  - intros H. destruct H as [H1 [H2 [H3 H4]]].
+    split.
+    + apply H1.
+    + apply H2.
+Qed.
+
 
 (* ================================================================= *)
 (* EXERCISE 3.4: Use the proof rules defined to prove the following  *)
