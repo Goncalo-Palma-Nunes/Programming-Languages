@@ -568,7 +568,7 @@ Theorem hoare_choice_equiv : forall P c1 c2 Q,
     (Q2 ->> Q)
   ).
 Proof.
-  intros P c1 c2 Q;
+  intros P c1 c2 Q.
   eexists. eexists.
   split.
   - (* Prove implication from left to right *)
