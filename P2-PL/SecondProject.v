@@ -545,10 +545,16 @@ Qed.
 Theorem hoare_choice' : forall P c1 c2 Q,
   (*TODO: Hoare proof rule for [c1 !! c2] 
   NOTE: Theorem 'statement' was added by Gonçalo, not the professors *)
+  {{ P }} c1 {{ Q }} ->
+  {{ P }} c2 {{ Q }} ->
   {{ P }} c1 !! c2 {{ Q }}.
 Proof.
-  (* TODO *)
-Admitted.
+  (* Prove using hoare_choice'' with Q1 and Q2 set to Q *)
+  intros P c1 c2 Q H1 H2.
+  apply hoare_choice'' with (Q1 := Q) (Q2 := Q);
+  try (unfold assert_implies; intros; assumption);
+  assumption.
+Qed.
 
 
 (* ================================================================= *)
@@ -565,19 +571,21 @@ Example hoare_choice_example:
   X := X + 1 !! X := X + 2
   {{ X = 2 \/ X = 3 }}.
 Proof.
-  apply hoare_choice' with (Q1 := (X = 2)%assertion) (Q2 := (X = 3)%assertion).
+  apply hoare_choice' with (Q := fun st => st X = 2 \/ st X = 3).
   - eapply hoare_consequence_pre.
     + apply hoare_asgn.
     + unfold assn_sub. intros st H.
-      simpl in *. rewrite H.
+      simpl in *. rewrite H. 
+      rewrite t_update_eq.
+      left.
       reflexivity.
   - eapply hoare_consequence_pre.
     + apply hoare_asgn.
     + unfold assn_sub. intros st H.
       simpl in *. rewrite H.
+      rewrite t_update_eq.
+      right.
       reflexivity.
-  - intros st H. left. rewrite H. reflexivity.
-  - intros st H. right. rewrite H. reflexivity.
 Qed.
 
 (* ################################################################# *)
@@ -1232,15 +1240,15 @@ Proof.
       + apply hoare_assume.
       + simpl. assumption.
   - (* NonDetChoice *)
-    destruct H as [H1 [H2 [HQ1 HQ2] ] ].
-    eapply hoare_consequence.
-      + eapply hoare_choice'.
-        * apply IHd1. apply H1.
-        * apply IHd2. apply H2.
-        * apply HQ1.
-        * apply HQ2.
-      + eauto.
-      + eauto.
+  destruct H as [H1 [H2 [HQ1 HQ2] ] ].
+  eapply hoare_consequence.
+    + eapply hoare_choice''.
+      * apply IHd1. apply H1.
+      * apply IHd2. apply H2.
+      * apply HQ1.
+      * apply HQ2.
+    + eauto.
+    + eauto.
 Qed.
 
 
