@@ -579,7 +579,7 @@ Proof.
     + unfold assert_implies. intros. assumption.
     + unfold assert_implies. intros. assumption.
   - (* Prove implication from right to left *)
-    intros H. destruct H as [H1 [H2 [H3 H4]]].
+    intros H. destruct H as [H1 [H2]].
     split.
     + apply H1.
     + apply H2.
