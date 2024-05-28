@@ -293,21 +293,6 @@ Proof.
   in case it becomes useful to solve some other proof *)
 Qed.
 
-Theorem hoare_post_true : forall (P Q : Assertion) c,
-  (forall st, Q st) ->
-  {{P}} c {{Q}}.
-Proof.
-  intros P Q c H st r Heval HP.
-  exists st. 
-  split.
-  - admit. 
-  - apply H.
-
-  (* NOTE : this theorem isn't part of the project, it's here
-  in case it becomes useful to solve some other proof *)
-Admitted.
-
-
 Theorem assume_false: forall P Q b,
        (forall st, beval st b = false) ->
        ({{P}} assume b {{Q}}).
